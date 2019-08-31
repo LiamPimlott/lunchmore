@@ -1,0 +1,25 @@
+{
+  "debug": true,
+  "server": {
+    "port": ":8080"
+  },
+  "context":{
+    "timeout":2
+  },
+  "mail": {
+    "username": "username", 
+    "password": "password", 
+    "host": "host",     
+    "port": "port"     
+  },
+  "database": {
+      "host": "host",
+      "port": "port",
+      "user": "user",
+      "pass": "pass",
+      "name": "name"
+  },
+  "jwt": {
+    "secret": "secret"
+  }
+}
