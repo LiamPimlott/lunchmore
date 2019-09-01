@@ -1,7 +1,7 @@
 package scheduling
 
 import (
-	// "log"
+	"log"
 
 	"github.com/robfig/cron"
 
@@ -11,10 +11,11 @@ import (
 // Service interface to schedules service
 type Service interface {
 	ScheduleAll() error
+	GetScheduleUsers(schedID uint) ([]ScheduleUser, error)
+	SaveMatches(lm []LunchMatch) error
 }
 
 type schedulingService struct {
-	cron cron.Cron
 	mail mail.Service
 	repo Repository
 }
@@ -41,20 +42,26 @@ func (j *MatchingJob) Run() error {
 // NewSchedulingService will return a struct that implements the schedulesService interface
 func NewSchedulingService(cron cron.Cron, mail mail.Service, repo Repository) *schedulingService {
 	return &schedulingService{
-		cron: cron,
 		mail: mail,
 		repo: repo,
 	}
 }
 
 // ScheduleAll schedules a cron job for all Schedules in the database
-func (s *schedulingService) ScheduleAll() error {
+func (s *schedulingService) ScheduleAll(c *cron.Cron) error {
+
+	scheds, err := s.repo.GetSchedules()
+	if err != nil {
+		log.Printf("error scheduling all: %s", err.Error())
+		return err
+	}
+
 	return nil
 }
 
 // GetScheduleUsers return all
-func (s *schedulingService) GetScheduleUsers(scheduleID uint) error {
-	return nil
+func (s *schedulingService) GetScheduleUsers(schedID uint) ([]ScheduleUser, error) {
+	return nil, nil
 }
 
 // SaveMatches

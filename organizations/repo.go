@@ -24,7 +24,7 @@ func NewMysqlOrganizationsRepository(db *sql.DB) *mysqlOrganizationsRepository {
 }
 
 // AddUser adds a org/user pair to the organization_users table
-func (r mysqlOrganizationsRepository) AddUser(oID, uID uint) (uint, error) {
+func (r *mysqlOrganizationsRepository) AddUser(oID, uID uint) (uint, error) {
 	sql, args, err := sq.Insert("organization_users").SetMap(sq.Eq{
 		"organization_id": oID,
 		"user_id":         uID,
