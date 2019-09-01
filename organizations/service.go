@@ -10,15 +10,13 @@ type Service interface {
 }
 
 type organizationsService struct {
-	repo   Repository
-	secret string
+	repo Repository
 }
 
 // NewOrganizationsService will return a struct that implements the organizationsService interface
-func NewOrganizationsService(repo Repository, secret string) *organizationsService {
+func NewOrganizationsService(repo Repository) *organizationsService {
 	return &organizationsService{
-		repo:   repo,
-		secret: secret,
+		repo: repo,
 	}
 }
 

@@ -211,6 +211,14 @@
   version = "v0.8.1"
 
 [[projects]]
+  digest = "1:b778880d47d8544b11cd82b0d9731f9669d653489b400d0b5899b8a20934e7b4"
+  name = "github.com/robfig/cron"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "45fbe1491cdd47d74d1bf1396286d67faee8b8b5"
+  version = "v3.0.0"
+
+[[projects]]
   digest = "1:bb495ec276ab82d3dd08504bbc0594a65de8c3b22c6f2aaa92d05b73fbf3a82e"
   name = "github.com/spf13/afero"
   packages = [
@@ -360,6 +368,7 @@
     "github.com/gorilla/mux",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
+    "github.com/robfig/cron",
     "github.com/spf13/viper",
     "golang.org/x/crypto/bcrypt",
   ]

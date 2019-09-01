@@ -96,7 +96,7 @@ func main() {
 	//////////////
 
 	mailService := mail.NewMailService(mailConfig)
-	orgsService := organizations.NewOrganizationsService(orgsRepository, secret)
+	orgsService := organizations.NewOrganizationsService(orgsRepository)
 	usersService := users.NewUsersService(usersRepository, secret)
 
 	//test mail.
