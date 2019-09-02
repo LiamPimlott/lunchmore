@@ -24,7 +24,7 @@ Subject: {{.Subject}}
 
 // Service interface to users service
 type Service interface {
-	SendText(msg string) error
+	SendText(msg string, recipients []string) error
 }
 
 type mailService struct {

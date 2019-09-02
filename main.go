@@ -10,11 +10,13 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/robfig/cron"
 	"github.com/spf13/viper"
 
 	"github.com/LiamPimlott/lunchmore/mail"
 	auth "github.com/LiamPimlott/lunchmore/middleware"
 	"github.com/LiamPimlott/lunchmore/organizations"
+	"github.com/LiamPimlott/lunchmore/scheduling"
 	"github.com/LiamPimlott/lunchmore/users"
 )
 
@@ -28,6 +30,7 @@ type DatabaseConfig struct {
 }
 
 var (
+	c          *cron.Cron
 	dbConfig   DatabaseConfig
 	mailConfig mail.ClientConfig
 	secret     string
@@ -41,6 +44,8 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	c = cron.New()
 
 	serverPort = viper.GetString(`server.port`)
 	dbConfig = DatabaseConfig{
@@ -88,6 +93,7 @@ func main() {
 	// Repos //
 	///////////
 
+	schedulingRepository := scheduling.NewMysqlSchedulingRepository(db)
 	orgsRepository := organizations.NewMysqlOrganizationsRepository(db)
 	usersRepository := users.NewMysqlUsersRepository(db)
 
@@ -96,11 +102,12 @@ func main() {
 	//////////////
 
 	mailService := mail.NewMailService(mailConfig)
+	schedulingService := scheduling.NewSchedulingService(mailService, schedulingRepository)
 	orgsService := organizations.NewOrganizationsService(orgsRepository)
 	usersService := users.NewUsersService(usersRepository, secret)
 
 	//test mail.
-	mailService.SendText("Hello Mail.", []string{"liam.tj.pimlott@gmail.com"})
+	// mailService.SendText("Hello Mail.", []string{"liam.tj.pimlott@gmail.com"})
 
 	//////////////
 	// Handlers //
@@ -110,6 +117,17 @@ func main() {
 	createUserHandler := users.NewCreateUserHandler(usersService)
 	createOrganizationHandler := organizations.NewCreateOrganizationHandler(orgsService)
 	// getUserByIDHandler := users.NewGetUserByIDHandler(usersService)
+
+	//////////////////
+	// Cron Startup //
+	//////////////////
+	err = schedulingService.ScheduleAll(c)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c.Start()
+	defer c.Stop()
 
 	////////////
 	// Routes //
