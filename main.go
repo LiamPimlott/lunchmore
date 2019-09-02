@@ -121,6 +121,7 @@ func main() {
 	//////////////////
 	// Cron Startup //
 	//////////////////
+
 	err = schedulingService.ScheduleAll(c)
 	if err != nil {
 		log.Fatal(err)
