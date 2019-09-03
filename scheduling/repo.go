@@ -31,25 +31,33 @@ func (r *mysqlSchedulingRepository) GetSchedules() (scheds []Schedule, err error
 
 	sql, args, err := sq.Select("*").From("schedules").ToSql()
 	if err != nil {
-		log.Printf("error in schedule repo: %s", err.Error())
+		log.Printf("error in schedule bloop repo: %s", err.Error())
 		return []Schedule{}, err
 	}
 
-	rows, err := r.DB.Query(sql, args)
+	rows, err := r.DB.Query(sql, args...)
 	if err != nil {
-		log.Printf("error in schedule repo: %s", err.Error())
+		log.Printf("error in schedule blah repo: %s", err.Error())
 		return []Schedule{}, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		s := Schedule{}
-		if err := rows.Scan(&s); err != nil {
-			log.Printf("error in schedule repo: %s", err.Error())
+		dest := []interface{}{
+			&s.ID,
+			&s.OrgID,
+			&s.Spec,
+			&s.CreatedAt,
+			&s.UpdatedAt,
+		}
+		if err := rows.Scan(dest...); err != nil {
+			log.Printf("error scanning schedules in schedule repo: %s", err.Error())
 		}
 		scheds = append(scheds, s)
 	}
 
+	log.Println("made it out")
 	return scheds, err
 }
 
@@ -58,28 +66,36 @@ func (r *mysqlSchedulingRepository) GetScheduleUsers(sID uint) (su []ScheduleUse
 
 	sql, args, err := sq.
 		Select("*").
-		From("schedules_users").
-		Where(sq.Eq{"id": sID}).ToSql()
+		From("schedule_users").
+		Where(sq.Eq{"schedule_id": sID}).ToSql()
 
 	if err != nil {
-		log.Printf("error in schedule repo: %s", err.Error())
+		log.Printf("YA error in schedule repo: %s", err.Error())
 		return su, err
 	}
 
-	rows, err := r.DB.Query(sql, args)
+	rows, err := r.DB.Query(sql, args...)
 	if err != nil {
-		log.Printf("error in schedule repo: %s", err.Error())
+		log.Printf("HEY error in schedule repo: %s", err.Error())
 		return su, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		s := ScheduleUser{}
-		if err := rows.Scan(&s); err != nil {
-			log.Printf("error in schedule repo: %s", err.Error())
+		dest := []interface{}{
+			&s.ID,
+			&s.UserID,
+			&s.ScheduleID,
+			&s.CreatedAt,
+			&s.UpdatedAt,
+		}
+		if err := rows.Scan(dest...); err != nil {
+			log.Printf("YO error in schedule repo: %s", err.Error())
 		}
 		su = append(su, s)
 	}
+
 	return su, err
 }
 

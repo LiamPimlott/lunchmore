@@ -29,29 +29,34 @@ type MatchingJob struct {
 
 // Run satisfies the cron Job interface
 func (j MatchingJob) Run() {
+
+	log.Printf("RUNNING CRON JOB FOR SCHED ID: %d", j.SchdlID)
+
 	// get schedule users
 	schdlUsrs, err := j.SchdlngSrvce.GetScheduleUsers(j.SchdlID)
 	if err != nil {
 		// a way to re-register before killing?
-		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
+		log.Printf("1 error running matching job for schedule %d: %s", j.SchdlID, err.Error())
 		panic(err)
 	}
 
-	// run matching algorithm
-	mtchs, _, err := matchRandom(schdlUsrs)
-	if err != nil {
-		// a way to re-register before killing?
-		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
-		panic(err)
-	}
+	log.Printf("Schedule Users: %+v", schdlUsrs)
 
-	// save matches
-	err = j.SchdlngSrvce.SaveMatches(mtchs)
-	if err != nil {
-		// a way to re-register before killing?
-		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
-		panic(err)
-	}
+	// // run matching algorithm
+	// mtchs, _, err := matchRandom(schdlUsrs)
+	// if err != nil {
+	// 	// a way to re-register before killing?
+	// 	log.Printf("2 error running matching job for schedule %d: %s", j.SchdlID, err.Error())
+	// 	panic(err)
+	// }
+
+	// // save matches
+	// err = j.SchdlngSrvce.SaveMatches(mtchs)
+	// if err != nil {
+	// 	// a way to re-register before killing?
+	// 	log.Printf("3 error running matching job for schedule %d: %s", j.SchdlID, err.Error())
+	// 	panic(err)
+	// }
 
 	// TODO: send match emails
 	// TODO: send apology email for remainder
@@ -69,20 +74,21 @@ func NewSchedulingService(mail mail.Service, repo Repository) *schedulingService
 func (s *schedulingService) ScheduleAll(c *cron.Cron) error {
 	schdls, err := s.repo.GetSchedules()
 	if err != nil {
-		log.Printf("error scheduling all: %s", err.Error())
+		log.Printf("error scheduling all 1: %s", err.Error())
 		return err
 	}
 
 	// Todo: check to see if already scheduled?
 	for _, schd := range schdls {
-		_, err = c.AddJob(schd.Spec, MatchingJob{
+		entryID, err := c.AddJob(schd.Spec, MatchingJob{
 			SchdlngSrvce: s,
 			SchdlID:      schd.ID,
 		})
 		if err != nil {
-			log.Printf("error scheduling all: %s", err.Error())
+			log.Printf("error scheduling all 2: %s", err.Error())
 			return err
 		}
+		log.Printf("Entry %d Scheduled.\n", entryID)
 	}
 	return nil
 }
