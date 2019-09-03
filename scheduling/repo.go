@@ -103,12 +103,12 @@ func (r *mysqlSchedulingRepository) SaveLunchMatches(lm []LunchMatch) error {
 
 	stmnt := sq.Insert("lunch_matches").Columns(
 		"user_id_1",
-		"user_id_1",
+		"user_id_2",
 		"schedule_id",
 	)
 
 	for _, m := range lm {
-		stmnt.Values(m.UserID1, m.UserID2, m.ScheduleID)
+		stmnt = stmnt.Values(m.UserID1, m.UserID2, m.ScheduleID)
 	}
 
 	sql, args, err := stmnt.ToSql()

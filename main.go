@@ -130,11 +130,6 @@ func main() {
 	c.Start()
 	defer c.Stop()
 
-	en := c.Entries()
-	for _, e := range en {
-		log.Printf("SCHEDULE: %v NEXT: %v PREV: %v\n", e.Schedule, e.Next, e.Prev)
-	}
-
 	////////////
 	// Routes //
 	////////////
