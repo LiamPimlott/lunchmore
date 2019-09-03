@@ -12,7 +12,7 @@ type Repository interface {
 	Create(u User) (User, error)
 	GetPassword(email string) (User, error)
 	GetUsers(usrIDs []uint) ([]User, error)
-	GetById(id int) (User, error)
+	GetByID(id uint) (User, error)
 }
 
 type mysqlUsersRepository struct {
@@ -117,8 +117,8 @@ func (r *mysqlUsersRepository) GetUsers(usrIDs []uint) (usrs []User, err error) 
 	return usrs, err
 }
 
-// GetById get user by id
-func (r *mysqlUsersRepository) GetById(id int) (User, error) {
+// GetByID get user by id
+func (r *mysqlUsersRepository) GetByID(id uint) (User, error) {
 	var usr User
 
 	stmnt, args, err := sq.Select("id", "first_name", "last_name", "email").

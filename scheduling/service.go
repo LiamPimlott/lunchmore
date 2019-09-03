@@ -16,7 +16,6 @@ type Service interface {
 	ScheduleAll() error
 	GetScheduleUsers(schedID uint) ([]ScheduleUser, error)
 	SaveMatches(lm []LunchMatch) error
-	SendMatchEmails(m []LunchMatch) error
 }
 
 type schedulingService struct {
@@ -78,8 +77,8 @@ func (s *schedulingService) SaveMatches(lm []LunchMatch) error {
 }
 
 // sendBasicMatchEmail
-func (s *schedulingService) sendBasicMatchEmail(fn, ln string, rcpts []string) error {
-	msg := fmt.Sprintf("You have been matched with %s %s!", fn, ln)
+func (s *schedulingService) sendBasicMatchEmail(ufn, fn, ln string, rcpts []string) error {
+	msg := fmt.Sprintf("Hi %s, you have been matched with %s %s. Have fun! :)", ufn, fn, ln)
 	err := s.mail.SendText(msg, rcpts)
 	if err != nil {
 		log.Printf("error sending match email: %s", err.Error())
@@ -89,7 +88,7 @@ func (s *schedulingService) sendBasicMatchEmail(fn, ln string, rcpts []string) e
 }
 
 // SendMatchEmails
-func (s *schedulingService) SendMatchEmails(ms []LunchMatch) error {
+func (s *schedulingService) sendMatchEmails(ms []LunchMatch) error {
 	usrIDs := []uint{}
 	for _, m := range ms {
 		usrIDs = append(usrIDs, m.UserID1, m.UserID2)
@@ -103,12 +102,31 @@ func (s *schedulingService) SendMatchEmails(ms []LunchMatch) error {
 
 	for _, m := range ms {
 		usr1 := usrs[m.UserID1]
-		s.sendBasicMatchEmail(usr1.FirstName, usr1.LastName, []string{usr1.Email})
-		log.Printf("Email sent to %+v of Schedule: %d\n", usr1.Email, m.ScheduleID)
 		usr2 := usrs[m.UserID2]
-		s.sendBasicMatchEmail(usr2.FirstName, usr2.LastName, []string{usr2.Email})
-		log.Printf("Email sent to %+v of Schedule: %d\n", usr1.Email, m.ScheduleID)
+		s.sendBasicMatchEmail(usr1.FirstName, usr2.FirstName, usr2.LastName, []string{usr1.Email})
+		log.Printf("Match email sent to User %d of Schedule: %d\n", usr1.ID, m.ScheduleID)
+		s.sendBasicMatchEmail(usr2.FirstName, usr1.FirstName, usr1.LastName, []string{usr2.Email})
+		log.Printf("Match email sent to User %d of Schedule: %d\n", usr2.ID, m.ScheduleID)
 	}
+	return nil
+}
+
+// SendOddOutEmail
+func (s *schedulingService) sendOddOutEmail(su ScheduleUser) error {
+	u, err := s.users.GetByID(su.UserID, su.UserID)
+	if err != nil {
+		log.Printf("error sending odd out email: %s", err.Error())
+		return err
+	}
+
+	msg := fmt.Sprintf("Sorry %s, your the odd one out this time. :(", u.FirstName)
+	err = s.mail.SendText(msg, []string{u.Email})
+	if err != nil {
+		log.Printf("error sending match email: %s", err.Error())
+		return err
+	}
+
+	log.Printf("Odd-Out email sent to User %+v of Schedule: %d\n", u.ID, su.ScheduleID)
 	return nil
 }
 
@@ -132,7 +150,7 @@ func (j MatchingJob) Run() {
 		return
 	}
 
-	mtchs, _, err := matchRandom(schdlUsrs)
+	mtchs, odd, err := matchRandom(schdlUsrs)
 	if err != nil {
 		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
 		panic(err)
@@ -144,13 +162,17 @@ func (j MatchingJob) Run() {
 		panic(err)
 	}
 
-	err = j.SchdlngSrvce.SendMatchEmails(mtchs)
+	err = j.SchdlngSrvce.sendMatchEmails(mtchs)
 	if err != nil {
 		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
 		panic(err)
 	}
 
-	// TODO: send apology email for remainder
+	err = j.SchdlngSrvce.sendOddOutEmail(odd)
+	if err != nil {
+		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
+		panic(err)
+	}
 
 	log.Printf("Finished cron job for Schedule ID: %d\n", j.SchdlID)
 }

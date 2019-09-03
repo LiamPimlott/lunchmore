@@ -13,6 +13,7 @@ type Service interface {
 	Create(u User) (User, error)
 	Login(u User) (User, error)
 	GetUsersMap(usrIDs []uint) (map[uint]User, error)
+	GetByID(idRequested, idClaimed uint) (User, error)
 }
 
 type usersService struct {
@@ -96,20 +97,20 @@ func (s *usersService) GetUsersMap(usrIDs []uint) (map[uint]User, error) {
 }
 
 // GetByID retrieves a user by their id
-// func (s *usersService) GetByID(idRequested, idClaimed int) (User, error) {
+func (s *usersService) GetByID(idRequested, idClaimed uint) (User, error) {
 
-// 	usr, err := s.repo.GetById(idRequested)
-// 	if err != nil {
-// 		log.Printf("error getting user: %s\n", err)
-// 		return User{}, err
-// 	}
+	usr, err := s.repo.GetByID(idRequested)
+	if err != nil {
+		log.Printf("error getting user: %s\n", err)
+		return User{}, err
+	}
 
-// 	if idRequested != idClaimed {
-// 		usr = User{
-// 			FirstName: usr.FirstName,
-// 			LastName:  usr.LastName,
-// 		}
-// 	}
+	if idRequested != idClaimed {
+		usr = User{
+			FirstName: usr.FirstName,
+			LastName:  usr.LastName,
+		}
+	}
 
-// 	return usr, nil
-// }
+	return usr, nil
+}
