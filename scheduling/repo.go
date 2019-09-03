@@ -56,8 +56,6 @@ func (r *mysqlSchedulingRepository) GetSchedules() (scheds []Schedule, err error
 		}
 		scheds = append(scheds, s)
 	}
-
-	log.Println("made it out")
 	return scheds, err
 }
 
@@ -70,13 +68,13 @@ func (r *mysqlSchedulingRepository) GetScheduleUsers(sID uint) (su []ScheduleUse
 		Where(sq.Eq{"schedule_id": sID}).ToSql()
 
 	if err != nil {
-		log.Printf("YA error in schedule repo: %s", err.Error())
+		log.Printf("error in schedule repo: %s", err.Error())
 		return su, err
 	}
 
 	rows, err := r.DB.Query(sql, args...)
 	if err != nil {
-		log.Printf("HEY error in schedule repo: %s", err.Error())
+		log.Printf("error in schedule repo: %s", err.Error())
 		return su, err
 	}
 	defer rows.Close()
@@ -91,7 +89,7 @@ func (r *mysqlSchedulingRepository) GetScheduleUsers(sID uint) (su []ScheduleUse
 			&s.UpdatedAt,
 		}
 		if err := rows.Scan(dest...); err != nil {
-			log.Printf("YO error in schedule repo: %s", err.Error())
+			log.Printf("error in schedule repo: %s", err.Error())
 		}
 		su = append(su, s)
 	}

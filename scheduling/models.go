@@ -34,6 +34,7 @@ func (s ScheduleUser) Valid() (bool, error) {
 }
 
 type LunchMatch struct {
+	ID         uint        `json:"id,omitempty" db:"id"`
 	UserID1    uint        `json:"user_id_1,omitempty" db:"user_id_1"`
 	UserID2    uint        `json:"user_id_2,omitempty" db:"user_id_2"`
 	ScheduleID uint        `json:"schedule_id,omitempty" db:"schedule_id"`

@@ -101,10 +101,10 @@ func main() {
 	// Services //
 	//////////////
 
-	mailService := mail.NewMailService(mailConfig)
-	schedulingService := scheduling.NewSchedulingService(mailService, schedulingRepository)
-	orgsService := organizations.NewOrganizationsService(orgsRepository)
 	usersService := users.NewUsersService(usersRepository, secret)
+	mailService := mail.NewMailService(mailConfig)
+	schedulingService := scheduling.NewSchedulingService(mailService, usersService, schedulingRepository)
+	orgsService := organizations.NewOrganizationsService(orgsRepository)
 
 	//test mail.
 	// mailService.SendText("Hello Mail.", []string{"liam.tj.pimlott@gmail.com"})

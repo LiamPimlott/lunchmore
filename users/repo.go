@@ -11,6 +11,7 @@ import (
 type Repository interface {
 	Create(u User) (User, error)
 	GetPassword(email string) (User, error)
+	GetUsers(usrIDs []uint) ([]User, error)
 	GetById(id int) (User, error)
 }
 
@@ -80,6 +81,40 @@ func (r *mysqlUsersRepository) GetPassword(email string) (User, error) {
 	}
 
 	return usr, nil
+}
+
+// GetUsers get users by a list of ids
+func (r *mysqlUsersRepository) GetUsers(usrIDs []uint) (usrs []User, err error) {
+
+	sql, args, err := sq.
+		Select("id", "first_name", "last_name", "email").
+		From("users").
+		Where(sq.Eq{"id": usrIDs}).ToSql()
+
+	if err != nil {
+		log.Printf("error in schedule repo: %s", err.Error())
+		return usrs, err
+	}
+
+	rows, err := r.DB.Query(sql, args...)
+	if err != nil {
+		log.Printf("error in schedule repo: %s", err.Error())
+		return usrs, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		u := User{}
+
+		err := rows.Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email)
+		if err != nil {
+			log.Printf("error in schedule repo: %s", err.Error())
+		}
+
+		usrs = append(usrs, u)
+	}
+
+	return usrs, err
 }
 
 // GetById get user by id

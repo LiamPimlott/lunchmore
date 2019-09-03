@@ -60,8 +60,7 @@ func (s *mailService) SendText(msg string, recipients []string) error {
 
 	from := "lunchmoreapp@gmail.com"
 
-	log.Printf("creds: user:%s pass:%s\n", s.config.Username, s.config.Password)
-
+	// log.Printf("creds: user:%s pass:%s\n", s.config.Username, s.config.Password)
 	// hostname is used by PlainAuth to validate the TLS certificate.
 	auth := smtp.PlainAuth("", s.config.Username, s.config.Password, s.config.Host)
 

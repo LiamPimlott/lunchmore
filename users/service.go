@@ -12,6 +12,7 @@ import (
 type Service interface {
 	Create(u User) (User, error)
 	Login(u User) (User, error)
+	GetUsersMap(usrIDs []uint) (map[uint]User, error)
 }
 
 type usersService struct {
@@ -76,6 +77,22 @@ func (s *usersService) Login(u User) (User, error) {
 	}
 
 	return User{Token: token}, nil
+}
+
+// GetUsers retrieves a map of users by id
+func (s *usersService) GetUsersMap(usrIDs []uint) (map[uint]User, error) {
+	usrs, err := s.repo.GetUsers(usrIDs)
+	if err != nil {
+		log.Printf("error getting users: %s\n", err)
+		return map[uint]User{}, err
+	}
+
+	usrsMap := map[uint]User{}
+	for _, u := range usrs {
+		usrsMap[u.ID] = u
+	}
+
+	return usrsMap, nil
 }
 
 // GetByID retrieves a user by their id

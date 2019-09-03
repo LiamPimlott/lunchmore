@@ -1,12 +1,14 @@
 package scheduling
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 
 	"github.com/robfig/cron"
 
 	"github.com/LiamPimlott/lunchmore/mail"
+	"github.com/LiamPimlott/lunchmore/users"
 )
 
 // Service interface to schedules service
@@ -14,18 +16,21 @@ type Service interface {
 	ScheduleAll() error
 	GetScheduleUsers(schedID uint) ([]ScheduleUser, error)
 	SaveMatches(lm []LunchMatch) error
+	SendMatchEmails(m []LunchMatch) error
 }
 
 type schedulingService struct {
-	mail mail.Service
-	repo Repository
+	mail  mail.Service
+	users users.Service
+	repo  Repository
 }
 
 // NewSchedulingService will return a struct that implements the schedulesService interface
-func NewSchedulingService(mail mail.Service, repo Repository) *schedulingService {
+func NewSchedulingService(mail mail.Service, users users.Service, repo Repository) *schedulingService {
 	return &schedulingService{
-		mail: mail,
-		repo: repo,
+		mail:  mail,
+		users: users,
+		repo:  repo,
 	}
 }
 
@@ -72,6 +77,41 @@ func (s *schedulingService) SaveMatches(lm []LunchMatch) error {
 	return nil
 }
 
+// sendBasicMatchEmail
+func (s *schedulingService) sendBasicMatchEmail(fn, ln string, rcpts []string) error {
+	msg := fmt.Sprintf("You have been matched with %s %s!", fn, ln)
+	err := s.mail.SendText(msg, rcpts)
+	if err != nil {
+		log.Printf("error sending match email: %s", err.Error())
+		return err
+	}
+	return nil
+}
+
+// SendMatchEmails
+func (s *schedulingService) SendMatchEmails(ms []LunchMatch) error {
+	usrIDs := []uint{}
+	for _, m := range ms {
+		usrIDs = append(usrIDs, m.UserID1, m.UserID2)
+	}
+
+	usrs, err := s.users.GetUsersMap(usrIDs)
+	if err != nil {
+		log.Printf("error sending match emails: %s", err.Error())
+		return err
+	}
+
+	for _, m := range ms {
+		usr1 := usrs[m.UserID1]
+		s.sendBasicMatchEmail(usr1.FirstName, usr1.LastName, []string{usr1.Email})
+		log.Printf("Email sent to %+v of Schedule: %d\n", usr1.Email, m.ScheduleID)
+		usr2 := usrs[m.UserID2]
+		s.sendBasicMatchEmail(usr2.FirstName, usr2.LastName, []string{usr2.Email})
+		log.Printf("Email sent to %+v of Schedule: %d\n", usr1.Email, m.ScheduleID)
+	}
+	return nil
+}
+
 // MatchingJob models matching job
 type MatchingJob struct {
 	SchdlngSrvce *schedulingService
@@ -80,47 +120,39 @@ type MatchingJob struct {
 
 // Run satisfies the cron Job interface
 func (j MatchingJob) Run() {
-
 	log.Printf("Running cron job for Schedule ID: %d\n", j.SchdlID)
+	// TODO: a way to re-register before killing?
 
-	// get schedule users
 	schdlUsrs, err := j.SchdlngSrvce.GetScheduleUsers(j.SchdlID)
 	if err != nil {
-		// a way to re-register before killing?
-		log.Printf("1 error running matching job for schedule %d: %s", j.SchdlID, err.Error())
+		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
 		panic(err)
-	}
-
-	log.Printf("Sched %d Users: %+v\n", j.SchdlID, schdlUsrs)
-
-	if len(schdlUsrs) < 2 {
+	} else if len(schdlUsrs) < 2 {
 		log.Printf("Less than 2 users have signed up, exiting Schedule %d.\n", j.SchdlID)
 		return
 	}
 
-	// run matching algorithm
-	mtchs, odd, err := matchRandom(schdlUsrs)
+	mtchs, _, err := matchRandom(schdlUsrs)
 	if err != nil {
-		// a way to re-register before killing?
-		log.Printf("2 error running matching job for schedule %d: %s", j.SchdlID, err.Error())
+		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
 		panic(err)
 	}
 
-	log.Printf("Odd User Out: %+v\n", odd.ID)
-	log.Printf("Sched %d Matches: %+v\n", j.SchdlID, mtchs)
-
-	// save matches
 	err = j.SchdlngSrvce.SaveMatches(mtchs)
 	if err != nil {
-		// a way to re-register before killing?
-		log.Printf("3 error running matching job for schedule %d: %s", j.SchdlID, err.Error())
+		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
 		panic(err)
 	}
 
-	log.Printf("Finished cron job for Schedule ID: %d\n", j.SchdlID)
+	err = j.SchdlngSrvce.SendMatchEmails(mtchs)
+	if err != nil {
+		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
+		panic(err)
+	}
 
-	// TODO: send match emails
 	// TODO: send apology email for remainder
+
+	log.Printf("Finished cron job for Schedule ID: %d\n", j.SchdlID)
 }
 
 // matchRandom returns slice of randomely matched schedule users the odd user out
