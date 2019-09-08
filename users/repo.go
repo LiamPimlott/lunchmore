@@ -63,7 +63,7 @@ func (r *mysqlUsersRepository) GetByEmail(email string) (User, error) {
 	var usr User
 
 	stmnt, args, err := sq.Select(
-		"id", "org_id", "first_name",
+		"id", "organization_id", "first_name",
 		"last_name", "email", "password",
 	).
 		From("users").
@@ -134,7 +134,7 @@ func (r *mysqlUsersRepository) GetByID(id uint) (User, error) {
 	var usr User
 
 	stmnt, args, err := sq.Select(
-		"id", "org_id", "first_name",
+		"id", "organization_id", "first_name",
 		"last_name", "email", "password",
 	).
 		From("users").

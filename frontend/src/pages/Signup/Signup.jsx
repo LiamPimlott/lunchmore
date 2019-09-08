@@ -13,9 +13,12 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-const Login = ({ auth, history }) => {
+const Signup = ({ auth, history }) => {
   const classes = useStyles();
   const [values, setValues] = useState({
+    org_name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
   });
@@ -25,7 +28,7 @@ const Login = ({ auth, history }) => {
   };
 
   const onSubmit = async (event) => {
-    const err = await auth.actions.login(values.email, values.password);
+    const err = await auth.actions.signup({ ...values });
     if (err) {
       alert(err);
     } else {
@@ -40,11 +43,37 @@ const Login = ({ auth, history }) => {
         direction='column'
         alignItems='center'
       >
-        <h1>Login</h1>
+        <h1>Signup</h1>
         <form>
           <Grid item xs={12}>
             <TextField
-              id="standard-name"
+              label="Organization Name"
+              value={values.org_name}
+              onChange={handleChange('org_name')}
+              margin="normal"
+              variant="outlined"
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              label="First Name"
+              value={values.first_name}
+              onChange={handleChange('first_name')}
+              margin="normal"
+              variant="outlined"
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              label="Last Name"
+              value={values.last_name}
+              onChange={handleChange('last_name')}
+              margin="normal"
+              variant="outlined"
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
               label="Email"
               value={values.email}
               onChange={handleChange('email')}
@@ -54,8 +83,8 @@ const Login = ({ auth, history }) => {
           </Grid>
           <Grid item xs={12}>
             <TextField
-              id="standard-name"
               label="Password"
+              type='password'
               value={values.password}
               onChange={handleChange('password')}
               margin="normal"
@@ -72,9 +101,9 @@ const Login = ({ auth, history }) => {
             </Button>
           </Grid>
         </form>
-      </Grid>  
+      </Grid>
     </Container>
   );
 };
 
-export default Login;
+export default Signup;

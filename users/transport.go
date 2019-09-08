@@ -28,7 +28,7 @@ func NewSignupHandler(s Service) http.HandlerFunc {
 
 		usr, err := s.Signup(*signupReq)
 		if err != nil {
-			log.Println("error creating user: %s", err)
+			log.Printf("error creating user: %s", err)
 			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, "")
 			return
 		}
