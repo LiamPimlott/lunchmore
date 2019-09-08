@@ -13,27 +13,27 @@ import (
 	"github.com/LiamPimlott/lunchmore/lib/utils"
 )
 
-// NewCreateUserHandler returns an http handler for signing up a new user and organization.
-func NewCreateUserHandler(s Service) http.HandlerFunc {
+// NewSignupHandler returns an http handler for signing up a new user and organization.
+func NewSignupHandler(s Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userReq := &User{}
+		signupReq := &SignupRequest{}
 
-		utils.Decode(w, r, userReq)
+		utils.Decode(w, r, signupReq)
 
-		ok, err := userReq.Valid()
+		ok, err := signupReq.Valid()
 		if !ok || err != nil {
 			utils.RespondError(w, errs.ErrInvalid.Code, errs.ErrInvalid.Msg, err.Error())
 			return
 		}
 
-		userRes, err := s.Create(*userReq)
+		usr, err := s.Signup(*signupReq)
 		if err != nil {
-			log.Println("error creating user")
+			log.Println("error creating user: %s", err)
 			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, "")
 			return
 		}
 
-		utils.Respond(w, userRes)
+		utils.Respond(w, usr)
 	}
 }
 
@@ -46,7 +46,7 @@ func NewLoginHandler(s Service) http.HandlerFunc {
 
 		ok := body.ValidLogin()
 		if !ok {
-			utils.RespondError(w, errs.ErrInvalid.Code, errs.ErrInvalid.Msg, "")
+			utils.RespondError(w, errs.ErrInvalid.Code, errs.ErrInvalid.Msg, "Invalid request data.")
 			return
 		}
 
@@ -54,10 +54,10 @@ func NewLoginHandler(s Service) http.HandlerFunc {
 		if err != nil {
 			log.Printf("error logging in user: %s\n", err)
 			if err == sql.ErrNoRows {
-				utils.RespondError(w, errs.ErrNotFound.Code, errs.ErrNotFound.Msg, "")
+				utils.RespondError(w, errs.ErrNotFound.Code, errs.ErrNotFound.Msg, "Email or password is incorrect.")
 				return
 			}
-			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, "")
+			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, "An error has occured.")
 			return
 		}
 

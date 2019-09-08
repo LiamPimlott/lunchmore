@@ -10,9 +10,10 @@ import (
 // Repository interface specifies database api
 type Repository interface {
 	Create(u User) (User, error)
-	GetPassword(email string) (User, error)
+	GetByEmail(email string) (User, error)
 	GetUsers(usrIDs []uint) ([]User, error)
 	GetByID(id uint) (User, error)
+	UpdateOrganization(uID, oID uint) error
 }
 
 type mysqlUsersRepository struct {
@@ -57,11 +58,14 @@ func (r *mysqlUsersRepository) Create(u User) (User, error) {
 	return User{ID: uint(id)}, nil
 }
 
-// GetPassword retrieves the id, email and password for an email
-func (r *mysqlUsersRepository) GetPassword(email string) (User, error) {
+// GetByEmail retrieves a user by email
+func (r *mysqlUsersRepository) GetByEmail(email string) (User, error) {
 	var usr User
 
-	stmnt, args, err := sq.Select("id", "email", "password").
+	stmnt, args, err := sq.Select(
+		"id", "org_id", "first_name",
+		"last_name", "email", "password",
+	).
 		From("users").
 		Where(sq.Eq{"email": email}).
 		ToSql()
@@ -70,7 +74,15 @@ func (r *mysqlUsersRepository) GetPassword(email string) (User, error) {
 		return User{}, err
 	}
 
-	err = r.DB.QueryRow(stmnt, args...).Scan(&usr.ID, &usr.Email, &usr.Password)
+	err = r.DB.QueryRow(stmnt, args...).Scan(
+		&usr.ID,
+		&usr.OrgID,
+		&usr.FirstName,
+		&usr.LastName,
+		&usr.Email,
+		&usr.Password,
+	)
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Printf("user %d not found.", usr.ID)
@@ -117,11 +129,14 @@ func (r *mysqlUsersRepository) GetUsers(usrIDs []uint) (usrs []User, err error) 
 	return usrs, err
 }
 
-// GetByID get user by id
+// GetByID get user by id exlcluding password
 func (r *mysqlUsersRepository) GetByID(id uint) (User, error) {
 	var usr User
 
-	stmnt, args, err := sq.Select("id", "first_name", "last_name", "email").
+	stmnt, args, err := sq.Select(
+		"id", "org_id", "first_name",
+		"last_name", "email", "password",
+	).
 		From("users").
 		Where(sq.Eq{"id": id}).
 		ToSql()
@@ -132,6 +147,7 @@ func (r *mysqlUsersRepository) GetByID(id uint) (User, error) {
 
 	err = r.DB.QueryRow(stmnt, args...).Scan(
 		&usr.ID,
+		&usr.OrgID,
 		&usr.FirstName,
 		&usr.LastName,
 		&usr.Email,
@@ -147,4 +163,30 @@ func (r *mysqlUsersRepository) GetByID(id uint) (User, error) {
 	}
 
 	return usr, nil
+}
+
+// UpdateOrganization adds an organization id to a user
+func (r *mysqlUsersRepository) UpdateOrganization(uID, oID uint) error {
+	stmnt, args, err := sq.Update("users").
+		Set("organization_id", oID).
+		Where(sq.Eq{"id": uID}).
+		ToSql()
+	if err != nil {
+		log.Printf("error in user repo: %s", err.Error())
+		return err
+	}
+
+	result, err := r.DB.Exec(stmnt, args...)
+	if err != nil {
+		log.Printf("error in user repo: %s", err.Error())
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil || affected != 1 {
+		log.Printf("error in user repo: %s", err.Error())
+		return err
+	}
+
+	return nil
 }

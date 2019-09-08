@@ -6,11 +6,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/LiamPimlott/lunchmore/lib/utils"
+	orgs "github.com/LiamPimlott/lunchmore/organizations"
 )
 
 // Service interface to users service
 type Service interface {
-	Create(u User) (User, error)
+	Signup(sr SignupRequest) (User, error)
 	Login(u User) (User, error)
 	GetUsersMap(usrIDs []uint) (map[uint]User, error)
 	GetByID(idRequested, idClaimed uint) (User, error)
@@ -18,40 +19,59 @@ type Service interface {
 
 type usersService struct {
 	repo   Repository
+	o      orgs.Service
 	secret string
 }
 
 // NewUsersService will return a struct that implements the UsersService interface
-func NewUsersService(repo Repository, secret string) *usersService {
+func NewUsersService(repo Repository, o orgs.Service, secret string) *usersService {
 	return &usersService{
 		repo:   repo,
+		o:      o,
 		secret: secret,
 	}
 }
 
-//Create creates a new user and issues a token
-func (s *usersService) Create(u User) (User, error) {
+//Signup creates a new user with a new organization and issues a token
+func (s *usersService) Signup(sr SignupRequest) (User, error) {
 	// TODO santitize and validate input
-	pass, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.MinCost)
+	pass, err := bcrypt.GenerateFromPassword([]byte(sr.Password), bcrypt.MinCost)
 	if err != nil {
 		log.Printf("error creating user: %s", err.Error())
 		return User{}, err
 	}
+	sr.Password = string(pass)
 
-	u.Password = string(pass)
-
-	usr, err := s.repo.Create(u)
+	usr, err := s.repo.Create(User{
+		FirstName: sr.FirstName,
+		LastName:  sr.LastName,
+		Email:     sr.Email,
+		Password:  sr.Password,
+	})
 	if err != nil {
 		log.Printf("error creating user: %s\n", err)
 		return User{}, err
 	}
+	log.Printf("SR: %+v\n", sr)
+
+	org, err := s.o.Create(orgs.Organization{AdminID: usr.ID, Name: sr.OrgName})
+	if err != nil {
+		log.Printf("error creating user: %s\n", err)
+		return User{}, err
+	}
+
+	err = s.repo.UpdateOrganization(usr.ID, org.ID)
+	if err != nil {
+		log.Printf("error creating user: %s\n", err)
+		return User{}, err
+	}
+	usr.OrgID = org.ID
 
 	token, err := utils.GenerateToken(usr.ID, s.secret)
 	if err != nil {
 		log.Printf("error creating user: %s\n", err)
 		return User{}, err
 	}
-
 	usr.Token = token
 
 	return usr, nil
@@ -59,7 +79,7 @@ func (s *usersService) Create(u User) (User, error) {
 
 // Login validates an email/pass and return a token
 func (s *usersService) Login(u User) (User, error) {
-	usr, err := s.repo.GetPassword(u.Email)
+	usr, err := s.repo.GetByEmail(u.Email)
 	if err != nil {
 		log.Printf("error logging in user: %s\n", err)
 		return User{}, err
@@ -77,7 +97,10 @@ func (s *usersService) Login(u User) (User, error) {
 		return User{}, err
 	}
 
-	return User{Token: token}, nil
+	usr.Password = ""
+	usr.Token = token
+
+	return usr, nil
 }
 
 // GetUsers retrieves a map of users by id

@@ -28,11 +28,5 @@ func (s *organizationsService) Create(o Organization) (Organization, error) {
 		return Organization{}, err
 	}
 
-	_, err = s.repo.AddUser(org.ID, o.AdminID)
-	if err != nil {
-		log.Printf("error creating organization: %s\n", err)
-		return Organization{}, err
-	}
-
 	return org, nil
 }

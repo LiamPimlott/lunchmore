@@ -30,3 +30,17 @@ func (u User) ValidLogin() bool {
 	}
 	return true
 }
+
+// SignupRequest models a signup request
+type SignupRequest struct {
+	OrgName   string `json:"org_name,omitempty" valid:"required~org_name is required"`
+	FirstName string `json:"first_name,omitempty" valid:"required~first_name is required"`
+	LastName  string `json:"last_name,omitempty" valid:"required~last_name is required"`
+	Email     string `json:"email,omitempty" valid:"required~email is required"`
+	Password  string `json:"password,omitempty" valid:"required~password is required"`
+}
+
+// Valid validates a User struct.
+func (sr SignupRequest) Valid() (bool, error) {
+	return govalidator.ValidateStruct(sr)
+}

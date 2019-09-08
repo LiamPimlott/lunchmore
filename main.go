@@ -101,10 +101,10 @@ func main() {
 	// Services //
 	//////////////
 
-	usersService := users.NewUsersService(usersRepository, secret)
+	orgsService := organizations.NewOrganizationsService(orgsRepository)
+	usersService := users.NewUsersService(usersRepository, orgsService, secret)
 	mailService := mail.NewMailService(mailConfig)
 	schedulingService := scheduling.NewSchedulingService(mailService, usersService, schedulingRepository)
-	orgsService := organizations.NewOrganizationsService(orgsRepository)
 
 	//test mail.
 	// mailService.SendText("Hello Mail.", []string{"liam.tj.pimlott@gmail.com"})
@@ -114,7 +114,7 @@ func main() {
 	//////////////
 
 	loginUserHandler := users.NewLoginHandler(usersService)
-	createUserHandler := users.NewCreateUserHandler(usersService)
+	signupHandler := users.NewSignupHandler(usersService)
 	createOrganizationHandler := organizations.NewCreateOrganizationHandler(orgsService)
 	// getUserByIDHandler := users.NewGetUserByIDHandler(usersService)
 
@@ -138,7 +138,7 @@ func main() {
 
 	// Users
 
-	r.Handle("/users", createUserHandler).Methods("POST")
+	r.Handle("/signup", signupHandler).Methods("POST")
 	r.Handle("/users/login", loginUserHandler).Methods("POST")
 	// r.Handle("/users/{id}", auth.Required(getUserByIDHandler, secret)).Methods("GET")
 

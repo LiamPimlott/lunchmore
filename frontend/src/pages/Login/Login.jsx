@@ -22,13 +22,14 @@ const Login = ({ auth, history }) => {
     setValues({ ...values, [name]: event.target.value });
   };
 
-  const onSubmit = event => {
-    const err = auth.actions.login(values.email, values.password);
-    // if (err) {
-    //   alert(err);
-    // } else {
-    //   history.push('/');
-    // }
+  const onSubmit = async (event) => {
+    const err = await auth.actions.login(values.email, values.password);
+    // console.log(err)
+    if (err) {
+      alert(err);
+    } else {
+      history.push('/');
+    }
   }
 
   return (

@@ -8,17 +8,9 @@ const useAuthState = () => {
     login: async (email, password) => {
       try {
         const r = await axios.post('/users/login', { email, password });
-        switch (r.status) {
-          case 200:
-            setAuth({ ...auth, token: r.data.token });
-            break;
-          case 404:
-            return "Email or password is incorrect.";
-          default:
-            return "An error has occured.";
-        }
-      } catch(e) {
-        // console.error(e)
+        setAuth({ ...auth, token: r.data.token });
+      } catch(err) {
+        return err.response.data.message
       }
     },
   };
