@@ -55,7 +55,13 @@ func (r *mysqlUsersRepository) Create(u User) (User, error) {
 		return User{}, err
 	}
 
-	return User{ID: uint(id)}, nil
+	usr, err := r.GetByID(uint(id))
+	if err != nil {
+		log.Printf("error in user repo: %s", err.Error())
+		return User{}, err
+	}
+
+	return usr, nil
 }
 
 // GetByEmail retrieves a user by email
@@ -129,7 +135,7 @@ func (r *mysqlUsersRepository) GetUsers(usrIDs []uint) (usrs []User, err error) 
 	return usrs, err
 }
 
-// GetByID get user by id exlcluding password
+// GetByID get user by id excluding password
 func (r *mysqlUsersRepository) GetByID(id uint) (User, error) {
 	var usr User
 
