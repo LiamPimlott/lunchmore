@@ -22,8 +22,13 @@ func (o Organization) Valid() (bool, error) {
 // Invitation models an invitation for an email address to join an organization
 type Invitation struct {
 	ID             uint        `json:"id,omitempty" db:"id"`
+	Code           string      `json:"code,omitempty" db:"code"`
 	OrganizationID uint        `json:"organization_id,omitempty" db:"organization_id" valid:"required~organization_id is required"`
 	Email          string      `json:"email,omitempty" db:"email" valid:"required~email is required"`
-	Code           string      `json:"code,omitempty" db:"code"`
 	CreatedAt      *nulls.Time `json:"created_at,omitempty" db:"created_at"`
+}
+
+// Valid validates an Invitation struct.
+func (i Invitation) Valid() (bool, error) {
+	return govalidator.ValidateStruct(i)
 }

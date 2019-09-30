@@ -10,9 +10,11 @@ const useMemberState = () => {
   const actions = {
     invite: async (email, token) => {
       try {
-        await axios.post('/organization/invite', {
+        await axios({
+          method: 'post',
+          url: '/organization/invite',
           headers: http.getHeaders(token),
-          data: { email }
+          data: { email },
         });
       } catch(err) {
         return err.response.data.message
@@ -20,7 +22,9 @@ const useMemberState = () => {
     },
     fetch: async (token) => {
       try {
-        const r = await axios.get('/organization/members',{
+        const r = await axios({
+          method: 'get',
+          url: '/organization/members',
           headers: http.getHeaders(token),
         });
         setMembers({

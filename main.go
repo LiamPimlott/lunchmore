@@ -115,8 +115,10 @@ func main() {
 
 	loginUserHandler := users.NewLoginHandler(usersService)
 	signupHandler := users.NewSignupHandler(usersService)
+
 	createOrganizationHandler := organizations.NewCreateOrganizationHandler(orgsService)
-	// getUserByIDHandler := users.NewGetUserByIDHandler(usersService)
+	organizationInviteHandler := organizations.NewOrganizationInviteHandler(orgsService)
+	// organizationMembersHandler := organizations.NewOrganizationMembersHandler(orgsService)
 
 	//////////////////
 	// Cron Startup //
@@ -137,16 +139,13 @@ func main() {
 	r := mux.NewRouter()
 
 	// Users
-
 	r.Handle("/signup", signupHandler).Methods("POST")
 	r.Handle("/users/login", loginUserHandler).Methods("POST")
-	// r.Handle("/users/{id}", auth.Required(getUserByIDHandler, secret)).Methods("GET")
 
 	// Organizations
-	r.Handle("/organizations", auth.Required(createOrganizationHandler, secret)).Methods("POST")
-
-	// TODO /organizations POST
-	// TODO /organizations/{id}/user POST
+	r.Handle("/organization", auth.Required(createOrganizationHandler, secret)).Methods("POST")
+	r.Handle("/organization/invite", auth.Required(organizationInviteHandler, secret)).Methods("POST")
+	// r.Handle("/organization/members", auth.Required(organizationMembersHandler, secret)).Methods("POST")
 
 	////////////
 	// STATIC //
