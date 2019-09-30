@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import MembersContainer from './containers/MembersContainer';
 
 const App = ({ globalState }) => {
   return (
@@ -20,6 +21,13 @@ const App = ({ globalState }) => {
           <Route
             path='/signup'
             render={props => <Signup 
+              {...props}
+              auth={globalState.auth}
+            />}
+          />
+          <Route
+            path='/members'
+            render={props => <MembersContainer 
               {...props}
               auth={globalState.auth}
             />}

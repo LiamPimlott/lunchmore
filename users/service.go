@@ -67,7 +67,7 @@ func (s *usersService) Signup(sr SignupRequest) (User, error) {
 	}
 	usr.OrgID = org.ID
 
-	token, err := utils.GenerateToken(usr.ID, s.secret)
+	token, err := utils.GenerateToken(usr.ID, org.ID, s.secret)
 	if err != nil {
 		log.Printf("error creating user: %s\n", err)
 		return User{}, err
@@ -91,7 +91,7 @@ func (s *usersService) Login(u User) (User, error) {
 		return User{}, err
 	}
 
-	token, err := utils.GenerateToken(usr.ID, s.secret)
+	token, err := utils.GenerateToken(usr.ID, usr.OrgID, s.secret)
 	if err != nil {
 		log.Printf("error logging in user: %s\n", err)
 		return User{}, err

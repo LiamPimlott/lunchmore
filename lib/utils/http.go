@@ -20,7 +20,8 @@ type ErrorResponse struct {
 
 // CustomClaims represents custom jwt claims.
 type CustomClaims struct {
-	ID uint `json:"id"`
+	ID    uint `json:"id"`
+	OrgID uint `json:"org_id"`
 	jwt.StandardClaims
 }
 
@@ -67,9 +68,10 @@ func WriteError(w http.ResponseWriter, code int, status string) {
 }
 
 // GenerateToken generates a signed jwt token string for a user.
-func GenerateToken(id uint, secret string) (string, error) {
+func GenerateToken(id, orgID uint, secret string) (string, error) {
 	claims := CustomClaims{
 		id,
+		orgID,
 		jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour * 1).Unix(),
 			Issuer:    "test",

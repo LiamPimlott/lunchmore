@@ -4,7 +4,10 @@ import axios from 'axios';
 const useAuthState = () => {
   const [auth, setAuth] = useState({
     id: '',
+    email: '',
     org_id: '',
+    first_name: '',
+    last_name: '',
     token: '',
   });
 
@@ -31,7 +34,10 @@ const useAuthState = () => {
         setAuth({
           ...auth,
           id: r.data.id,
+          email: r.data.email,
           org_id: r.data.org_id,
+          first_name: r.data.first_name,
+          last_name: r.data.last_name,
           token: r.data.token,
         });
       } catch(err) {
