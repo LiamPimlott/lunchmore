@@ -1,9 +1,12 @@
 package organizations
 
 import (
-	"github.com/LiamPimlott/lunchmore/lib/errs"
-	"github.com/google/uuid"
 	"log"
+
+	"github.com/google/uuid"
+
+	"github.com/LiamPimlott/lunchmore/lib/errs"
+	"github.com/LiamPimlott/lunchmore/mail"
 )
 
 // Service interface to users service
@@ -15,12 +18,14 @@ type Service interface {
 
 type organizationsService struct {
 	repo Repository
+	mail mail.Service
 }
 
 // NewOrganizationsService will return a struct that implements the organizationsService interface
-func NewOrganizationsService(repo Repository) *organizationsService {
+func NewOrganizationsService(repo Repository, mail mail.Service) *organizationsService {
 	return &organizationsService{
 		repo: repo,
+		mail: mail,
 	}
 }
 
@@ -78,7 +83,12 @@ func (s *organizationsService) Invite(i Invitation, inviterID uint) (Invitation,
 		return Invitation{}, err
 	}
 
-	// TODO: send email with link and bas64 invite code
+	// TODO: retry
+	s.mail.SendInvite(org.Name, inv.Code, inv.Email)
+	if err != nil {
+		log.Printf("error sending invitation: %s\n", err)
+		return Invitation{}, err
+	}
 
 	return inv, nil
 }

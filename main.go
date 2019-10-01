@@ -101,9 +101,9 @@ func main() {
 	// Services //
 	//////////////
 
-	orgsService := organizations.NewOrganizationsService(orgsRepository)
-	usersService := users.NewUsersService(usersRepository, orgsService, secret)
 	mailService := mail.NewMailService(mailConfig)
+	orgsService := organizations.NewOrganizationsService(orgsRepository, mailService)
+	usersService := users.NewUsersService(usersRepository, orgsService, secret)
 	schedulingService := scheduling.NewSchedulingService(mailService, usersService, schedulingRepository)
 
 	//test mail.
