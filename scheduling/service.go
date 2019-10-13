@@ -79,7 +79,7 @@ func (s *schedulingService) SaveMatches(lm []LunchMatch) error {
 // sendBasicMatchEmail
 func (s *schedulingService) sendBasicMatchEmail(ufn, fn, ln string, rcpts []string) error {
 	msg := fmt.Sprintf("Hi %s, you have been matched with %s %s. Have fun! :)", ufn, fn, ln)
-	err := s.mail.SendText(msg, rcpts)
+	err := s.mail.SendText(rcpts, "New lunch match!", msg)
 	if err != nil {
 		log.Printf("error sending match email: %s", err.Error())
 		return err
@@ -120,7 +120,7 @@ func (s *schedulingService) sendOddOutEmail(su ScheduleUser) error {
 	}
 
 	msg := fmt.Sprintf("Sorry %s, your the odd one out this time. :(", u.FirstName)
-	err = s.mail.SendText(msg, []string{u.Email})
+	err = s.mail.SendText([]string{u.Email}, "Were sorry!", msg)
 	if err != nil {
 		log.Printf("error sending match email: %s", err.Error())
 		return err

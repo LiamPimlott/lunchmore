@@ -83,8 +83,8 @@ func (s *organizationsService) Invite(i Invitation, inviterID uint) (Invitation,
 		return Invitation{}, err
 	}
 
-	// TODO: retry
-	s.mail.SendInvite(org.Name, inv.Code, inv.Email)
+	// TODO: retry mechanism
+	s.mail.SendInvite(org.Name, i.Code, []string{i.Email})
 	if err != nil {
 		log.Printf("error sending invitation: %s\n", err)
 		return Invitation{}, err

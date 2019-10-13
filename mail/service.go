@@ -4,126 +4,115 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	t "html/template"
+	html "html/template"
 	"log"
 	"net/smtp"
 	"strconv"
 	"text/template"
 )
 
-type SmtpTemplateData struct {
-	From    string
-	To      string
-	Subject string
-	Body    string
-}
-
 // Service interface to users service
 type Service interface {
-	SendText(msg string, recipients []string) error
-	SendInvite(orgName, code string, recipient string) error
+	SendText(recipients []string, subject, text string) error
+	SendInvite(orgName, code string, recipients []string) error
+	// TODO: make templates for matches etc
 }
 
 type mailService struct {
 	config ClientConfig
+	addr   string
+	auth   smtp.Auth
 }
 
 // NewMailService will return a struct that implements the mailService interface
 func NewMailService(config ClientConfig) *mailService {
-	return &mailService{config: config}
+	return &mailService{
+		config: config,
+		addr:   config.Host + ":" + strconv.Itoa(config.Port),
+		auth:   smtp.PlainAuth("", config.Username, config.Password, config.Host),
+	}
 }
 
-const emailTemplate = `From: {{.From}}
-To: {{.To}}
-Subject: {{.Subject}}
+// SendText sends a basic plaintext email
+func (s *mailService) SendText(recipients []string, subject, text string) error {
+	var body bytes.Buffer
 
-{{.Body}}
-`
-
-func (s *mailService) SendText(msg string, recipients []string) error {
-	var err error
-	var doc bytes.Buffer
-
-	context := &SmtpTemplateData{
-		"lunchmoreapp@gmail.com",
-		"liam.tj.pimlott@gmail.com",
-		"Hello Subject",
-		msg,
+	templateData := struct {
+		Body string
+	}{
+		Body: text,
 	}
 
-	t := template.New("emailTemplate")
-	t, err = t.Parse(emailTemplate)
+	t, err := template.New("textTemplate").Parse(`{{.Body}}`)
 	if err != nil {
 		log.Print("error trying to parse mail template")
 		return err
 	}
-	err = t.Execute(&doc, context)
+
+	err = t.Execute(&body, templateData)
 	if err != nil {
 		log.Print("error trying to execute mail template")
 		return err
 	}
 
-	from := "lunchmoreapp@gmail.com"
+	mime := "MIME-version: 1.0;\nContent-Type: text/plain; charset=\"UTF-8\";\n\n"
+	subject = fmt.Sprintf("Subject: %s\n", subject)
+	msg := []byte(subject + mime + "\n" + body.String())
 
-	// log.Printf("creds: user:%s pass:%s\n", s.config.Username, s.config.Password)
-	// hostname is used by PlainAuth to validate the TLS certificate.
-	auth := smtp.PlainAuth("", s.config.Username, s.config.Password, s.config.Host)
-
-	err = smtp.SendMail(s.config.Host+":"+strconv.Itoa(s.config.Port), auth, from, recipients, doc.Bytes())
+	err = smtp.SendMail(s.addr, s.auth, s.config.Username, recipients, msg)
 	if err != nil {
 		log.Printf("error sending mail: %s\n", err)
 		return err
 	}
+
 	return nil
 }
 
-type inviteData struct {
-	From         string
-	To           string
-	Subject      string
-	Link         string
-	Organization string
-}
-
-const inviteTemplate = `From: {{.From}}
-To: {{.To}}
-Subject: {{.Subject}}
-
-<a href="{{.Link}}">Click here</a> to join {{.Organization}}!
-`
-
-func (s *mailService) SendInvite(orgName, code string, recipient string) error {
-	var doc bytes.Buffer
-	from := "lunchmoreapp@gmail.com"
-
-	// make link
+// SendInvite sends an invite email
+func (s *mailService) SendInvite(orgName, code string, recipients []string) error {
 	codeBase64 := base64.StdEncoding.EncodeToString([]byte(code))
 	link := fmt.Sprintf("https://localhost:8080/invite/%s", codeBase64)
 
-	data := &inviteData{
-		from,
-		recipient,
-		fmt.Sprintf("Invite to %s on Lunchmore", orgName),
-		link,
-		orgName,
+	subject := "Invite"
+	templatePath := "./mail/templates/invite.html"
+
+	templateData := struct {
+		Link         string
+		Organization string
+	}{
+		Link:         link,
+		Organization: orgName,
 	}
 
-	template, err := t.New("invite email").Parse(inviteTemplate)
+	err := s.sendHTML(recipients, subject, templatePath, templateData)
+	if err != nil {
+		log.Printf("error sending html email template: %s\n", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *mailService) sendHTML(recipients []string, subject, path string, data interface{}) error {
+	var body bytes.Buffer
+
+	template, err := html.ParseFiles(path)
 	if err != nil {
 		log.Printf("error creating email template: %s\n", err)
 		return err
 	}
 
-	err = template.Execute(&doc, data)
+	err = template.Execute(&body, data)
 	if err != nil {
 		log.Print("error trying to execute mail template")
 		return err
 	}
 
-	auth := smtp.PlainAuth("", s.config.Username, s.config.Password, s.config.Host)
+	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
+	subject = fmt.Sprintf("Subject: %s\n", subject)
+	msg := []byte(subject + mime + "\n" + body.String())
 
-	to := []string{recipient}
-	err = smtp.SendMail(s.config.Host+":"+strconv.Itoa(s.config.Port), auth, from, to, doc.Bytes())
+	err = smtp.SendMail(s.addr, s.auth, s.config.Username, recipients, msg)
 	if err != nil {
 		log.Printf("error sending mail: %s\n", err)
 		return err
