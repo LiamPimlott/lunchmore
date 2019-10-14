@@ -70,3 +70,31 @@ func NewAcceptInviteHandler(s Service) http.HandlerFunc {
 		utils.Respond(w, user)
 	}
 }
+
+// NewGetInviteHandler returns an http handler for getting a sent invite.
+func NewGetInviteHandler(s Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		queryVals := r.URL.Query()
+
+		code := queryVals.Get("code")
+		if code == "" {
+			msg := "query param code, is required"
+			utils.RespondError(w, errs.ErrInvalid.Code, errs.ErrInvalid.Msg, msg)
+			return
+		}
+
+		decodedCode, err := base64.StdEncoding.DecodeString(code)
+		if err != nil {
+			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, err.Error())
+			return
+		}
+
+		orgName, err := s.GetOrgNameByCode(string(decodedCode))
+		if err != nil {
+			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, err.Error())
+			return
+		}
+
+		utils.Respond(w, InviteInfo{OrgName: orgName})
+	}
+}

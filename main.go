@@ -123,6 +123,7 @@ func main() {
 
 	sendInviteHandler := invites.NewSendInviteHandler(invitesService)
 	acceptInviteHandler := invites.NewAcceptInviteHandler(invitesService)
+	getInviteHandler := invites.NewGetInviteHandler(invitesService)
 
 	//////////////////
 	// Cron Startup //
@@ -151,6 +152,7 @@ func main() {
 
 	// Invitations
 	r.Handle("/invite", auth.Required(sendInviteHandler, secret)).Methods("POST")
+	r.Handle("/invite", getInviteHandler).Methods("GET")
 	r.Handle("/invite/accept", acceptInviteHandler).Methods("POST")
 
 	// TODO: expose more info for invite frontend to display

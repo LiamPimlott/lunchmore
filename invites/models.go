@@ -32,3 +32,8 @@ type JoinRequest struct {
 func (j JoinRequest) Valid() (bool, error) {
 	return govalidator.ValidateStruct(j)
 }
+
+// InviteInfo models information about an invite that can be displayed to the invitee
+type InviteInfo struct {
+	OrgName string `json:"org_name"`
+}

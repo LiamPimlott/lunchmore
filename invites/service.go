@@ -15,6 +15,7 @@ import (
 type Service interface {
 	SendInvite(i Invitation, inviterID uint) (Invitation, error)
 	AcceptInvite(j JoinRequest) (users.User, error)
+	GetOrgNameByCode(code string) (string, error)
 }
 
 type inviteService struct {
@@ -79,7 +80,7 @@ func (s *inviteService) SendInvite(i Invitation, inviterID uint) (Invitation, er
 func (s *inviteService) AcceptInvite(j JoinRequest) (users.User, error) {
 	invite, err := s.repo.GetByCode(j.Code)
 	if err != nil {
-		log.Printf("error creating invitation: %s\n", err)
+		log.Printf("error getting invitation by code: %s\n", err)
 		return users.User{}, err
 	}
 
@@ -104,4 +105,21 @@ func (s *inviteService) AcceptInvite(j JoinRequest) (users.User, error) {
 	}
 
 	return user, nil
+}
+
+// GetOrgNameByCode gets the associated organization name by an invite code
+func (s *inviteService) GetOrgNameByCode(code string) (string, error) {
+	invite, err := s.repo.GetByCode(code)
+	if err != nil {
+		log.Printf("error getting invitation by code: %s\n", err)
+		return "", err
+	}
+
+	org, err := s.orgs.GetByID(invite.OrganizationID)
+	if err != nil {
+		log.Printf("error getting organization by id: %s\n", err)
+		return "", err
+	}
+
+	return org.Name, nil
 }
