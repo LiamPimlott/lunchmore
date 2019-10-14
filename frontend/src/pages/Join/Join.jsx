@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useJoinOrganizationState } from '../../hooks';
 import { makeStyles } from '@material-ui/core/styles';
 import Grid from '@material-ui/core/Grid';
 import Container from '@material-ui/core/Container';
@@ -13,22 +14,26 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-const Signup = ({ auth, history }) => {
+const Join = ({ auth, match, history }) => {
   const classes = useStyles();
+  const invite = useJoinOrganizationState();
+  const { params: { code } } = match;
   const [values, setValues] = useState({
-    org_name: '',
     first_name: '',
     last_name: '',
-    email: '',
     password: '',
   });
+  
+  useEffect(() => {
+    invite.actions.getOrgName(code);
+  }, []);
 
   const handleChange = name => event => {
     setValues({ ...values, [name]: event.target.value });
   };
 
   const onSubmit = async (event) => {
-    const err = await auth.actions.signup({ ...values });
+    const err = await auth.actions.join(code, { ...values });
     if (err) {
       alert(err);
     } else {
@@ -43,17 +48,8 @@ const Signup = ({ auth, history }) => {
         direction='column'
         alignItems='center'
       >
-        <h1>Signup</h1>
+        <h1>{`Join${invite.orgName ? ` ${invite.orgName}` : ''}`}</h1>
         <form>
-          <Grid item xs={12}>
-            <TextField
-              label="Organization Name"
-              value={values.org_name}
-              onChange={handleChange('org_name')}
-              margin="normal"
-              variant="outlined"
-            />
-          </Grid>
           <Grid item xs={12}>
             <TextField
               label="First Name"
@@ -74,15 +70,6 @@ const Signup = ({ auth, history }) => {
           </Grid>
           <Grid item xs={12}>
             <TextField
-              label="Email"
-              value={values.email}
-              onChange={handleChange('email')}
-              margin="normal"
-              variant="outlined"
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
               label="Password"
               type='password'
               value={values.password}
@@ -97,7 +84,7 @@ const Signup = ({ auth, history }) => {
               color="primary"
               onClick={onSubmit}
             >
-              Sign Up
+              Join Organization
             </Button>
           </Grid>
         </form>
@@ -106,4 +93,4 @@ const Signup = ({ auth, history }) => {
   );
 };
 
-export default Signup;
+export default Join;

@@ -44,6 +44,22 @@ const useAuthState = () => {
         return err.response.data.message
       }
     },
+    join: async (code, form) => {
+      try {
+        const r = await axios.post('/invite/accept', { code, ...form });
+        setAuth({
+          ...auth,
+          id: r.data.id,
+          email: r.data.email,
+          org_id: r.data.org_id,
+          first_name: r.data.first_name,
+          last_name: r.data.last_name,
+          token: r.data.token,
+        });
+      } catch(err) {
+        return err.response.data.message
+      }
+    },
   };
 
   return { 

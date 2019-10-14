@@ -71,7 +71,7 @@ func (s *mailService) SendText(recipients []string, subject, text string) error 
 // SendInvite sends an invite email
 func (s *mailService) SendInvite(orgName, code string, recipients []string) error {
 	codeBase64 := base64.StdEncoding.EncodeToString([]byte(code))
-	link := fmt.Sprintf("https://localhost:8080/invite/%s", codeBase64)
+	link := fmt.Sprintf("http://localhost:3000/invite/%s", codeBase64)
 
 	subject := "Invite"
 	templatePath := "./mail/templates/invite.html"

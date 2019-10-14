@@ -12,7 +12,7 @@ const useMemberState = () => {
       try {
         await axios({
           method: 'post',
-          url: '/organization/invite',
+          url: '/invite',
           headers: http.getHeaders(token),
           data: { email },
         });
