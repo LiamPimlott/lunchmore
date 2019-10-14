@@ -3,38 +3,87 @@ package scheduling
 import (
 	"fmt"
 	"log"
-	"math/rand"
+	"strings"
 
 	"github.com/robfig/cron"
 
+	"github.com/LiamPimlott/lunchmore/lib/errs"
 	"github.com/LiamPimlott/lunchmore/mail"
+	"github.com/LiamPimlott/lunchmore/organizations"
 	"github.com/LiamPimlott/lunchmore/users"
 )
 
 // Service interface to schedules service
 type Service interface {
+	CreateSchedule(sched ScheduleRequest, claimedID uint) (Schedule, error)
 	ScheduleAll() error
+	ScheduleJob(schedID uint) error
 	GetScheduleUsers(schedID uint) ([]ScheduleUser, error)
 	SaveMatches(lm []LunchMatch) error
 }
 
 type schedulingService struct {
+	cron  *cron.Cron
 	mail  mail.Service
 	users users.Service
+	orgs  organizations.Service
 	repo  Repository
 }
 
 // NewSchedulingService will return a struct that implements the schedulesService interface
-func NewSchedulingService(mail mail.Service, users users.Service, repo Repository) *schedulingService {
+func NewSchedulingService(
+	cron *cron.Cron,
+	mail mail.Service,
+	users users.Service,
+	orgs organizations.Service,
+	repo Repository,
+) *schedulingService {
 	return &schedulingService{
-		mail:  mail,
-		users: users,
-		repo:  repo,
+		cron,
+		mail,
+		users,
+		orgs,
+		repo,
 	}
 }
 
+// CreateSchedule creates a new schedule
+func (s *schedulingService) CreateSchedule(schedReq ScheduleRequest, claimedID uint) (Schedule, error) {
+
+	org, err := s.orgs.GetByID(schedReq.OrgID)
+	if err != nil {
+		log.Printf("error getting organization: %s", err.Error())
+		return Schedule{}, err
+	}
+
+	if org.AdminID != claimedID {
+		log.Printf("error creating schedule: admin id does not equal claimed id")
+		return Schedule{}, errs.ErrForbidden
+	}
+
+	days := strings.Join(schedReq.Days, ",")
+	sched := Schedule{
+		OrgID: schedReq.OrgID,
+		Spec:  fmt.Sprintf("0 0 ? * %s", days),
+	}
+
+	sched, err = s.repo.CreateSchedule(sched)
+	if err != nil {
+		log.Printf("error creating schedule: %s", err.Error())
+		return Schedule{}, err
+	}
+
+	err = s.ScheduleJob(sched.ID)
+	if err != nil {
+		log.Printf("error scheduling job: %s", err.Error())
+		return Schedule{}, err
+	}
+
+	return sched, nil
+}
+
 // ScheduleAll schedules a cron job for all Schedules in the database
-func (s *schedulingService) ScheduleAll(c *cron.Cron) error {
+func (s *schedulingService) ScheduleAll() error {
 	schdls, err := s.repo.GetSchedules()
 	if err != nil {
 		log.Printf("error scheduling all 1: %s", err.Error())
@@ -43,7 +92,7 @@ func (s *schedulingService) ScheduleAll(c *cron.Cron) error {
 
 	// Todo: check to see if already scheduled?
 	for _, schd := range schdls {
-		e, err := c.AddJob(schd.Spec, MatchingJob{
+		e, err := s.cron.AddJob(schd.Spec, MatchingJob{
 			SchdlngSrvce: s,
 			SchdlID:      schd.ID,
 		})
@@ -51,8 +100,29 @@ func (s *schedulingService) ScheduleAll(c *cron.Cron) error {
 			log.Printf("error scheduling all 2: %s", err.Error())
 			return err
 		}
-		log.Printf("Entry %d Scheduled: %s\n", e, schd.Spec)
+		log.Printf("org %d scheduled (%s) as entry %d \n", schd.OrgID, schd.Spec, e)
 	}
+	return nil
+}
+
+// ScheduleJob schedules a cron job with the given schedule id
+func (s *schedulingService) ScheduleJob(schedID uint) error {
+	sched, err := s.repo.GetByID(schedID)
+	if err != nil {
+		log.Printf("error getting schedule by id: %s", err.Error())
+		return err
+	}
+
+	e, err := s.cron.AddJob(sched.Spec, MatchingJob{
+		SchdlngSrvce: s,
+		SchdlID:      sched.ID,
+	})
+	if err != nil {
+		log.Printf("error adding job to cron: %s", err.Error())
+		return err
+	}
+	log.Printf("org %d scheduled (%s) as entry %d \n", sched.OrgID, sched.Spec, e)
+
 	return nil
 }
 
@@ -128,83 +198,4 @@ func (s *schedulingService) sendOddOutEmail(su ScheduleUser) error {
 
 	log.Printf("Odd-Out email sent to User %+v of Schedule: %d\n", u.ID, su.ScheduleID)
 	return nil
-}
-
-// MatchingJob models matching job
-type MatchingJob struct {
-	SchdlngSrvce *schedulingService
-	SchdlID      uint
-}
-
-// Run satisfies the cron Job interface
-func (j MatchingJob) Run() {
-	log.Printf("Running cron job for Schedule ID: %d\n", j.SchdlID)
-	// TODO: a way to re-register before killing?
-
-	schdlUsrs, err := j.SchdlngSrvce.GetScheduleUsers(j.SchdlID)
-	if err != nil {
-		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
-		panic(err)
-	} else if len(schdlUsrs) < 2 {
-		log.Printf("Less than 2 users have signed up, exiting Schedule %d.\n", j.SchdlID)
-		return
-	}
-
-	mtchs, odd, err := matchRandom(schdlUsrs)
-	if err != nil {
-		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
-		panic(err)
-	}
-
-	err = j.SchdlngSrvce.SaveMatches(mtchs)
-	if err != nil {
-		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
-		panic(err)
-	}
-
-	err = j.SchdlngSrvce.sendMatchEmails(mtchs)
-	if err != nil {
-		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
-		panic(err)
-	}
-
-	err = j.SchdlngSrvce.sendOddOutEmail(odd)
-	if err != nil {
-		log.Printf("error running matching job for schedule %d: %s", j.SchdlID, err.Error())
-		panic(err)
-	}
-
-	log.Printf("Finished cron job for Schedule ID: %d\n", j.SchdlID)
-}
-
-// matchRandom returns slice of randomely matched schedule users the odd user out
-func matchRandom(su []ScheduleUser) ([]LunchMatch, ScheduleUser, error) {
-	lm := []LunchMatch{}
-
-	for len(su) > 1 {
-		r1 := rand.Intn(len(su))
-		r2 := rand.Intn(len(su))
-		for r1 == r2 {
-			r2 = rand.Intn(len(su))
-		}
-
-		lm = append(lm, LunchMatch{
-			UserID1:    su[r1].UserID,
-			UserID2:    su[r2].UserID,
-			ScheduleID: su[r1].ScheduleID,
-		})
-
-		if su[r2] == su[len(su)-1] {
-			su[r1], su[len(su)-2] = su[len(su)-2], su[r1]
-		} else {
-			su[r1], su[len(su)-1] = su[len(su)-1], su[r1]
-			su[r2], su[len(su)-2] = su[len(su)-2], su[r2]
-		}
-		su = su[:len(su)-2]
-	}
-
-	if len(su) != 0 {
-		return lm, su[0], nil
-	}
-	return lm, ScheduleUser{}, nil
 }

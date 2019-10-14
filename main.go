@@ -106,7 +106,7 @@ func main() {
 	mailService := mail.NewMailService(mailConfig)
 	orgsService := organizations.NewOrganizationsService(orgsRepository, mailService)
 	usersService := users.NewUsersService(usersRepository, orgsService, secret)
-	schedulingService := scheduling.NewSchedulingService(mailService, usersService, schedulingRepository)
+	schedulingService := scheduling.NewSchedulingService(c, mailService, usersService, orgsService, schedulingRepository)
 	invitesService := invites.NewInviteService(invitesRepository, mailService, orgsService, usersService)
 
 	//test mail.
@@ -125,11 +125,13 @@ func main() {
 	acceptInviteHandler := invites.NewAcceptInviteHandler(invitesService)
 	getInviteHandler := invites.NewGetInviteHandler(invitesService)
 
+	createScheduleHandler := scheduling.NewCreateScheduleHandler(schedulingService)
+
 	//////////////////
 	// Cron Startup //
 	//////////////////
 
-	err = schedulingService.ScheduleAll(c)
+	err = schedulingService.ScheduleAll()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -154,6 +156,9 @@ func main() {
 	r.Handle("/invite", auth.Required(sendInviteHandler, secret)).Methods("POST")
 	r.Handle("/invite", getInviteHandler).Methods("GET")
 	r.Handle("/invite/accept", acceptInviteHandler).Methods("POST")
+
+	// Schedules
+	r.Handle("/schedules", auth.Required(createScheduleHandler, secret)).Methods("POST")
 
 	// TODO: expose more info for invite frontend to display
 	// r.Handle("/organization/invite/{code}", getInviteHandler).Methods("GET")

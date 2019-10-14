@@ -10,6 +10,8 @@ import (
 
 // Repository interface specifies database api
 type Repository interface {
+	CreateSchedule(s Schedule) (Schedule, error)
+	GetByID(id uint) (Schedule, error)
 	GetSchedules() ([]Schedule, error)
 	GetScheduleUsers(sID uint) ([]ScheduleUser, error)
 	SaveLunchMatches(lm []LunchMatch) error
@@ -24,6 +26,66 @@ func NewMysqlSchedulingRepository(db *sql.DB) *mysqlSchedulingRepository {
 	return &mysqlSchedulingRepository{
 		DB: db,
 	}
+}
+
+// CreateSchedule insert schedule into database
+func (r *mysqlSchedulingRepository) CreateSchedule(s Schedule) (Schedule, error) {
+	sql, args, err := sq.Insert("schedules").SetMap(sq.Eq{
+		"org_id": s.OrgID,
+		"spec":   s.Spec,
+	}).ToSql()
+
+	if err != nil {
+		log.Printf("error assembling create schedule statement: %s", err.Error())
+		return Schedule{}, err
+	}
+
+	res, err := r.DB.Exec(sql, args...)
+	if err != nil {
+		log.Printf("error executing create schedule statement: %s", err.Error())
+		return Schedule{}, err
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		log.Printf("error accesing last inserted schedule id: %s", err.Error())
+		return Schedule{}, err
+	}
+	s.ID = uint(id)
+
+	return s, nil
+}
+
+// GetByID get schedule by id
+func (r *mysqlSchedulingRepository) GetByID(id uint) (Schedule, error) {
+	var sched Schedule
+
+	stmnt, args, err := sq.
+		Select("id", "org_id", "spec").
+		From("schedules").
+		Where(sq.Eq{"id": id}).
+		ToSql()
+	if err != nil {
+		log.Printf("error in build get schedule by id statement: %s", err.Error())
+		return Schedule{}, err
+	}
+
+	err = r.DB.QueryRow(stmnt, args...).Scan(
+		&sched.ID,
+		&sched.OrgID,
+		&sched.Spec,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("schedule %d not found.", sched.ID)
+			return Schedule{}, err
+		}
+		log.Printf("error executing get schedule by id query: %s", err.Error())
+		return Schedule{}, err
+	}
+
+	return sched, nil
 }
 
 // GetSchedules returns all schedules

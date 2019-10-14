@@ -46,3 +46,27 @@ type LunchMatch struct {
 func (l LunchMatch) Valid() (bool, error) {
 	return govalidator.ValidateStruct(l)
 }
+
+// type ScheduleDay string
+
+// const (
+// 	Sunday    ScheduleDay = "SUN"
+// 	Monday    ScheduleDay = "MON"
+// 	Tuesday   ScheduleDay = "TUE"
+// 	Wednesday ScheduleDay = "WED"
+// 	Thursday  ScheduleDay = "THU"
+// 	Friday    ScheduleDay = "FRI"
+// 	Saturday  ScheduleDay = "SAT"
+// )
+
+// ScheduleRequest models a request for a new schedule
+type ScheduleRequest struct {
+	OrgID uint     `json:"org_id,omitempty"`
+	Days  []string `json:"days,omitempty" valid:"required~field days is required, in(SUN|MON|TUE|WED|THU|FRI|SAT)"`
+	// Interval string   `json:"interval,omitempty" valid:"required~field interval is required`
+}
+
+// Valid validates a ScheduleRequest struct.
+func (sr ScheduleRequest) Valid() (bool, error) {
+	return govalidator.ValidateStruct(sr)
+}
