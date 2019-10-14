@@ -10,7 +10,6 @@ import (
 type Repository interface {
 	Create(o Organization) (Organization, error)
 	GetByID(id uint) (Organization, error)
-	CreateInvitation(i Invitation) (Invitation, error)
 }
 
 type mysqlOrganizationsRepository struct {
@@ -83,34 +82,4 @@ func (r *mysqlOrganizationsRepository) GetByID(id uint) (Organization, error) {
 	}
 
 	return org, nil
-}
-
-// CreateInvitation inserts a new invitation into the db
-func (r *mysqlOrganizationsRepository) CreateInvitation(i Invitation) (Invitation, error) {
-	// TODO: validate & sanitize
-
-	sql, args, err := sq.Insert("invitations").SetMap(sq.Eq{
-		"organization_id": i.OrganizationID,
-		"email":           i.Email,
-		"code":            i.Code,
-	}).ToSql()
-
-	if err != nil {
-		log.Printf("error in organization repo: %s", err.Error())
-		return Invitation{}, err
-	}
-
-	res, err := r.DB.Exec(sql, args...)
-	if err != nil {
-		log.Printf("error in organization repo: %s", err.Error())
-		return Invitation{}, err
-	}
-
-	id, err := res.LastInsertId()
-	if err != nil {
-		log.Printf("error in organization repo: %s", err.Error())
-		return Invitation{}, err
-	}
-
-	return Invitation{ID: uint(id)}, nil
 }

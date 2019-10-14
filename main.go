@@ -13,6 +13,7 @@ import (
 	"github.com/robfig/cron"
 	"github.com/spf13/viper"
 
+	"github.com/LiamPimlott/lunchmore/invites"
 	"github.com/LiamPimlott/lunchmore/mail"
 	auth "github.com/LiamPimlott/lunchmore/middleware"
 	"github.com/LiamPimlott/lunchmore/organizations"
@@ -96,6 +97,7 @@ func main() {
 	schedulingRepository := scheduling.NewMysqlSchedulingRepository(db)
 	orgsRepository := organizations.NewMysqlOrganizationsRepository(db)
 	usersRepository := users.NewMysqlUsersRepository(db)
+	invitesRepository := invites.NewMysqlInvitationsRepository(db)
 
 	//////////////
 	// Services //
@@ -105,6 +107,7 @@ func main() {
 	orgsService := organizations.NewOrganizationsService(orgsRepository, mailService)
 	usersService := users.NewUsersService(usersRepository, orgsService, secret)
 	schedulingService := scheduling.NewSchedulingService(mailService, usersService, schedulingRepository)
+	invitesService := invites.NewInviteService(invitesRepository, mailService, orgsService, usersService)
 
 	//test mail.
 	// mailService.SendText("Hello Mail.", []string{"liam.tj.pimlott@gmail.com"})
@@ -117,8 +120,9 @@ func main() {
 	signupHandler := users.NewSignupHandler(usersService)
 
 	createOrganizationHandler := organizations.NewCreateOrganizationHandler(orgsService)
-	organizationInviteHandler := organizations.NewOrganizationInviteHandler(orgsService)
-	// organizationMembersHandler := organizations.NewOrganizationMembersHandler(orgsService)
+
+	sendInviteHandler := invites.NewSendInviteHandler(invitesService)
+	acceptInviteHandler := invites.NewAcceptInviteHandler(invitesService)
 
 	//////////////////
 	// Cron Startup //
@@ -144,8 +148,13 @@ func main() {
 
 	// Organizations
 	r.Handle("/organization", auth.Required(createOrganizationHandler, secret)).Methods("POST")
-	r.Handle("/organization/invite", auth.Required(organizationInviteHandler, secret)).Methods("POST")
-	// r.Handle("/organization/members", auth.Required(organizationMembersHandler, secret)).Methods("POST")
+
+	// Invitations
+	r.Handle("/invite", auth.Required(sendInviteHandler, secret)).Methods("POST")
+	r.Handle("/invite/accept", acceptInviteHandler).Methods("POST")
+
+	// TODO: expose more info for invite frontend to display
+	// r.Handle("/organization/invite/{code}", getInviteHandler).Methods("GET")
 
 	////////////
 	// STATIC //
