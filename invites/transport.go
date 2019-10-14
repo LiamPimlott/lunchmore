@@ -61,12 +61,12 @@ func NewAcceptInviteHandler(s Service) http.HandlerFunc {
 		}
 		joinReq.Code = string(decodedCode)
 
-		err = s.AcceptInvite(*joinReq)
+		user, err := s.AcceptInvite(*joinReq)
 		if err != nil {
 			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, err.Error())
 			return
 		}
 
-		utils.Respond(w, joinReq)
+		utils.Respond(w, user)
 	}
 }

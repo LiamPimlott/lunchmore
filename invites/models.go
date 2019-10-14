@@ -12,6 +12,7 @@ type Invitation struct {
 	OrganizationID uint        `json:"organization_id,omitempty" db:"organization_id" valid:"required~organization_id is required"`
 	Email          string      `json:"email,omitempty" db:"email" valid:"required~email is required"`
 	CreatedAt      *nulls.Time `json:"created_at,omitempty" db:"created_at"`
+	UpdatedAt      *nulls.Time `json:"updated_at,omitempty" db:"updated_at"`
 }
 
 // Valid validates an Invitation struct.

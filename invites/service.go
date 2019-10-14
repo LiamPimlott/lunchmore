@@ -14,7 +14,7 @@ import (
 // Service interface to users service
 type Service interface {
 	SendInvite(i Invitation, inviterID uint) (Invitation, error)
-	AcceptInvite(j JoinRequest) error
+	AcceptInvite(j JoinRequest) (users.User, error)
 }
 
 type inviteService struct {
@@ -76,12 +76,32 @@ func (s *inviteService) SendInvite(i Invitation, inviterID uint) (Invitation, er
 	return inv, nil
 }
 
-func (s *inviteService) AcceptInvite(j JoinRequest) error {
-	// get invite
+func (s *inviteService) AcceptInvite(j JoinRequest) (users.User, error) {
+	invite, err := s.repo.GetByCode(j.Code)
+	if err != nil {
+		log.Printf("error creating invitation: %s\n", err)
+		return users.User{}, err
+	}
 
-	// create user with provided creds
+	user := users.User{
+		OrgID:     invite.OrganizationID,
+		FirstName: j.FirstName,
+		LastName:  j.LastName,
+		Email:     invite.Email,
+		Password:  j.Password,
+	}
 
-	// delete invite
+	user, err = s.users.AcceptInvite(user)
+	if err != nil {
+		log.Printf("error accepting invitation: %s\n", err)
+		return users.User{}, err
+	}
 
-	return nil
+	err = s.repo.DeleteByID(invite.ID)
+	if err != nil {
+		log.Printf("error deleting invitation: %s\n", err)
+		return users.User{}, err
+	}
+
+	return user, nil
 }

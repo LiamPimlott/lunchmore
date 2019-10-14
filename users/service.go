@@ -13,6 +13,7 @@ import (
 type Service interface {
 	Signup(sr SignupRequest) (User, error)
 	Login(u User) (User, error)
+	AcceptInvite(u User) (User, error)
 	GetUsersMap(usrIDs []uint) (map[uint]User, error)
 	GetByID(idRequested, idClaimed uint) (User, error)
 }
@@ -136,4 +137,30 @@ func (s *usersService) GetByID(idRequested, idClaimed uint) (User, error) {
 	}
 
 	return usr, nil
+}
+
+//Signup creates a new user with a new organization and issues a token
+func (s *usersService) AcceptInvite(u User) (User, error) {
+	// TODO santitize and validate input
+	passEncrypted, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.MinCost)
+	if err != nil {
+		log.Printf("error generating password hash: %s", err.Error())
+		return User{}, err
+	}
+	u.Password = string(passEncrypted)
+
+	u, err = s.repo.Create(u)
+	if err != nil {
+		log.Printf("error calling user repo: %s\n", err)
+		return User{}, err
+	}
+
+	token, err := utils.GenerateToken(u.ID, u.OrgID, s.secret)
+	if err != nil {
+		log.Printf("error generating token: %s\n", err)
+		return User{}, err
+	}
+	u.Token = token
+
+	return u, nil
 }

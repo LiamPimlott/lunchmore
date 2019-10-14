@@ -2,6 +2,7 @@ package invites
 
 import (
 	"database/sql"
+	"fmt"
 	sq "github.com/Masterminds/squirrel"
 	"log"
 )
@@ -9,6 +10,8 @@ import (
 // Repository interface specifies database api
 type Repository interface {
 	CreateInvitation(i Invitation) (Invitation, error)
+	GetByCode(code string) (Invitation, error)
+	DeleteByID(id uint) error
 }
 
 type mysqlInvitationsRepository struct {
@@ -50,4 +53,69 @@ func (r *mysqlInvitationsRepository) CreateInvitation(i Invitation) (Invitation,
 	}
 
 	return Invitation{ID: uint(id)}, nil
+}
+
+// GetByCode attempts to retrieve an invitation by uuid string
+func (r *mysqlInvitationsRepository) GetByCode(code string) (Invitation, error) {
+	var inv Invitation
+
+	stmnt, args, err := sq.
+		Select("*").
+		From("invitations").
+		Where(sq.Eq{"code": code}).
+		ToSql()
+	if err != nil {
+		log.Printf("error in organizations repo: %s", err.Error())
+		return Invitation{}, err
+	}
+
+	err = r.DB.QueryRow(stmnt, args...).Scan(
+		&inv.ID,
+		&inv.Code,
+		&inv.OrganizationID,
+		&inv.Email,
+		&inv.CreatedAt,
+		&inv.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("invitation %s not found.", code)
+			return Invitation{}, err
+		}
+		log.Printf("error in invitations repo: %s", err.Error())
+		return Invitation{}, err
+	}
+
+	return inv, nil
+}
+
+// DeleteByID attempts to delete an invitation by id
+func (r *mysqlInvitationsRepository) DeleteByID(id uint) error {
+	stmnt, args, err := sq.
+		Delete("invitations").
+		Where(sq.Eq{"id": id}).
+		ToSql()
+	if err != nil {
+		log.Printf("error preparing delete statement: %s", err.Error())
+		return err
+	}
+
+	res, err := r.DB.Exec(stmnt, args...)
+	if err != nil {
+		log.Printf("error executing statement: %s", err.Error())
+		return err
+	}
+
+	numAffected, err := res.RowsAffected()
+	if err != nil {
+		log.Printf("error checking rows affected: %s", err.Error())
+		return err
+	} else if numAffected != 1 {
+		err := fmt.Errorf("incorrect number of rows affected: %d", numAffected)
+		log.Printf("error checking rows affected: %s", err.Error())
+		return err
+	}
+
+	return nil
 }

@@ -32,32 +32,33 @@ func (r *mysqlUsersRepository) Create(u User) (User, error) {
 	// TODO: validate & sanitize
 
 	sql, args, err := sq.Insert("users").SetMap(sq.Eq{
-		"first_name": u.FirstName,
-		"last_name":  u.LastName,
-		"email":      u.Email,
-		"password":   u.Password,
+		"organization_id": u.OrgID,
+		"first_name":      u.FirstName,
+		"last_name":       u.LastName,
+		"email":           u.Email,
+		"password":        u.Password,
 	}).ToSql()
 
 	if err != nil {
-		log.Printf("error in user repo: %s", err.Error())
+		log.Printf("error assembling create user statement: %s", err.Error())
 		return User{}, err
 	}
 
 	res, err := r.DB.Exec(sql, args...)
 	if err != nil {
-		log.Printf("error in user repo: %s", err.Error())
+		log.Printf("error executing create user statement: %s", err.Error())
 		return User{}, err
 	}
 
 	id, err := res.LastInsertId()
 	if err != nil {
-		log.Printf("error in user repo: %s", err.Error())
+		log.Printf("error accesing last inserted user id: %s", err.Error())
 		return User{}, err
 	}
 
 	usr, err := r.GetByID(uint(id))
 	if err != nil {
-		log.Printf("error in user repo: %s", err.Error())
+		log.Printf("error retrieving created user by id: %s", err.Error())
 		return User{}, err
 	}
 
@@ -141,13 +142,13 @@ func (r *mysqlUsersRepository) GetByID(id uint) (User, error) {
 
 	stmnt, args, err := sq.Select(
 		"id", "organization_id", "first_name",
-		"last_name", "email", "password",
+		"last_name", "email",
 	).
 		From("users").
 		Where(sq.Eq{"id": id}).
 		ToSql()
 	if err != nil {
-		log.Printf("error in user repo: %s", err.Error())
+		log.Printf("error in assembling get by id statement: %s", err.Error())
 		return User{}, err
 	}
 
@@ -164,7 +165,7 @@ func (r *mysqlUsersRepository) GetByID(id uint) (User, error) {
 			log.Printf("user %d not found.", usr.ID)
 			return User{}, err
 		}
-		log.Printf("error in user repo: %s", err.Error())
+		log.Printf("error executing query: %s", err.Error())
 		return User{}, err
 	}
 
