@@ -16,10 +16,11 @@ import (
 // Service interface to schedules service
 type Service interface {
 	CreateSchedule(sched ScheduleRequest, claimedID uint) (Schedule, error)
+	GetOrgSchedules(orgID uint) ([]Schedule, error)
 	ScheduleAll() error
 	ScheduleJob(schedID uint) error
 	GetScheduleUsers(schedID uint) ([]ScheduleUser, error)
-	SaveMatches(lm []LunchMatch) error
+	SaveMatches(m []LunchMatch) error
 }
 
 type schedulingService struct {
@@ -49,7 +50,6 @@ func NewSchedulingService(
 
 // CreateSchedule creates a new schedule
 func (s *schedulingService) CreateSchedule(schedReq ScheduleRequest, claimedID uint) (Schedule, error) {
-
 	org, err := s.orgs.GetByID(schedReq.OrgID)
 	if err != nil {
 		log.Printf("error getting organization: %s", err.Error())
@@ -61,10 +61,9 @@ func (s *schedulingService) CreateSchedule(schedReq ScheduleRequest, claimedID u
 		return Schedule{}, errs.ErrForbidden
 	}
 
-	days := strings.Join(schedReq.Days, ",")
 	sched := Schedule{
 		OrgID: schedReq.OrgID,
-		Spec:  fmt.Sprintf("0 0 ? * %s", days),
+		Spec:  fmt.Sprintf("0 0 ? * %s", strings.Join(schedReq.Days, ",")),
 	}
 
 	sched, err = s.repo.CreateSchedule(sched)
@@ -80,6 +79,16 @@ func (s *schedulingService) CreateSchedule(schedReq ScheduleRequest, claimedID u
 	}
 
 	return sched, nil
+}
+
+// GetOrgSchedules retrieves an organization's schedules
+func (s *schedulingService) GetOrgSchedules(orgID uint) ([]Schedule, error) {
+	schedules, err := s.repo.GetOrgSchedules(orgID)
+	if err != nil {
+		log.Printf("error getting organization schedules: %s", err.Error())
+		return []Schedule{}, err
+	}
+	return schedules, nil
 }
 
 // ScheduleAll schedules a cron job for all Schedules in the database
@@ -137,8 +146,8 @@ func (s *schedulingService) GetScheduleUsers(schdID uint) ([]ScheduleUser, error
 }
 
 // SaveMatches
-func (s *schedulingService) SaveMatches(lm []LunchMatch) error {
-	err := s.repo.SaveLunchMatches(lm)
+func (s *schedulingService) SaveMatches(m []LunchMatch) error {
+	err := s.repo.SaveLunchMatches(m)
 	if err != nil {
 		log.Printf("error saving lunch matches: %s", err.Error())
 		return err

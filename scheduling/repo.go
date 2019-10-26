@@ -11,6 +11,7 @@ import (
 // Repository interface specifies database api
 type Repository interface {
 	CreateSchedule(s Schedule) (Schedule, error)
+	GetOrgSchedules(ordID uint) ([]Schedule, error)
 	GetByID(id uint) (Schedule, error)
 	GetSchedules() ([]Schedule, error)
 	GetScheduleUsers(sID uint) ([]ScheduleUser, error)
@@ -88,36 +89,56 @@ func (r *mysqlSchedulingRepository) GetByID(id uint) (Schedule, error) {
 	return sched, nil
 }
 
-// GetSchedules returns all schedules
-func (r *mysqlSchedulingRepository) GetSchedules() (scheds []Schedule, err error) {
-
-	sql, args, err := sq.Select("*").From("schedules").ToSql()
+// GetOrgSchedules gets schedules by organization
+func (r *mysqlSchedulingRepository) GetOrgSchedules(orgID uint) ([]Schedule, error) {
+	sql, args, err := sq.
+		Select("*").
+		From("schedules").
+		Where(sq.Eq{"org_id": orgID}).
+		ToSql()
 	if err != nil {
-		log.Printf("error in schedule bloop repo: %s", err.Error())
+		log.Printf("error creating get org schedules query: %s", err.Error())
 		return []Schedule{}, err
 	}
 
 	rows, err := r.DB.Query(sql, args...)
 	if err != nil {
-		log.Printf("error in schedule blah repo: %s", err.Error())
+		log.Printf("error executing get org schedules query: %s", err.Error())
 		return []Schedule{}, err
 	}
 	defer rows.Close()
 
-	for rows.Next() {
-		s := Schedule{}
-		dest := []interface{}{
-			&s.ID,
-			&s.OrgID,
-			&s.Spec,
-			&s.CreatedAt,
-			&s.UpdatedAt,
-		}
-		if err := rows.Scan(dest...); err != nil {
-			log.Printf("error scanning schedules in schedule repo: %s", err.Error())
-		}
-		scheds = append(scheds, s)
+	scheds, err := scanSchedules(rows)
+	if err != nil {
+		log.Printf("error scanning schedules: %s", err.Error())
+		return []Schedule{}, err
 	}
+
+	return scheds, err
+}
+
+// GetSchedules returns all schedules
+func (r *mysqlSchedulingRepository) GetSchedules() (scheds []Schedule, err error) {
+
+	sql, args, err := sq.Select("*").From("schedules").ToSql()
+	if err != nil {
+		log.Printf("error in schedule repo: %s", err.Error())
+		return []Schedule{}, err
+	}
+
+	rows, err := r.DB.Query(sql, args...)
+	if err != nil {
+		log.Printf("error in schedule repo: %s", err.Error())
+		return []Schedule{}, err
+	}
+	defer rows.Close()
+
+	scheds, err = scanSchedules(rows)
+	if err != nil {
+		log.Printf("error scanning schedules: %s", err.Error())
+		return []Schedule{}, err
+	}
+
 	return scheds, err
 }
 
@@ -195,4 +216,26 @@ func (r *mysqlSchedulingRepository) SaveLunchMatches(lm []LunchMatch) error {
 	}
 
 	return nil
+}
+
+func scanSchedules(rows *sql.Rows) ([]Schedule, error) {
+	var scheds []Schedule
+
+	for rows.Next() {
+		s := Schedule{}
+		dest := []interface{}{
+			&s.ID,
+			&s.OrgID,
+			&s.Spec,
+			&s.CreatedAt,
+			&s.UpdatedAt,
+		}
+		if err := rows.Scan(dest...); err != nil {
+			log.Printf("error scanning schedules in schedule repo: %s", err.Error())
+			return scheds, err
+		}
+		scheds = append(scheds, s)
+	}
+
+	return scheds, nil
 }

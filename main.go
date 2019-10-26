@@ -126,6 +126,7 @@ func main() {
 	getInviteHandler := invites.NewGetInviteHandler(invitesService)
 
 	createScheduleHandler := scheduling.NewCreateScheduleHandler(schedulingService)
+	getOrgSchedulesHandler := scheduling.NewGetOrgSchedulesHandler(schedulingService)
 
 	//////////////////
 	// Cron Startup //
@@ -159,6 +160,7 @@ func main() {
 
 	// Schedules
 	r.Handle("/schedules", auth.Required(createScheduleHandler, secret)).Methods("POST")
+	r.Handle("/schedules/organization/{id}", auth.Required(getOrgSchedulesHandler, secret)).Methods("GET")
 
 	// TODO: expose more info for invite frontend to display
 	// r.Handle("/organization/invite/{code}", getInviteHandler).Methods("GET")

@@ -4,6 +4,7 @@ CREATE TABLE `schedules` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `org_id` int(11) NOT NULL DEFAULT 0,
   `spec` varchar(255) NOT NULL DEFAULT '',
+  `days` enum('SUN', 'MON', 'TUES', 'WED', 'THU', 'FRI', 'SAT') NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
