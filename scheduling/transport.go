@@ -3,6 +3,7 @@ package scheduling
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
@@ -47,7 +48,6 @@ func NewCreateScheduleHandler(s Service) http.HandlerFunc {
 // NewGetOrgSchedulesHandler returns an http handler for retrieving an organization's schedules.
 func NewGetOrgSchedulesHandler(s Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		params := mux.Vars(r)
 
 		id, err := strconv.Atoi(params["id"])
@@ -74,5 +74,41 @@ func NewGetOrgSchedulesHandler(s Service) http.HandlerFunc {
 		}
 
 		utils.Respond(w, schedules)
+	}
+
+}
+
+// NewJoinScheduleHandler returns an http handler for joining a schedule.
+func NewJoinScheduleHandler(s Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		params := mux.Vars(r)
+
+		id, err := strconv.Atoi(params["id"])
+		if err != nil {
+			utils.RespondError(w, errs.ErrInvalid.Code, errs.ErrInvalid.Msg, "")
+			return
+		}
+
+		claims, ok := context.Get(r, "claims").(*utils.CustomClaims)
+		if !ok {
+			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, "")
+			return
+		}
+
+		scheduleUser, err := s.JoinSchedule(uint(id), claims.OrgID, claims.ID)
+		if err != nil {
+			if err.Error() == errs.ErrForbidden.Msg {
+				utils.RespondError(w, errs.ErrForbidden.Code, errs.ErrForbidden.Msg, err.Error())
+				return
+			}
+			if strings.Contains(err.Error(), "Duplicate entry") {
+				utils.RespondError(w, errs.ErrInvalid.Code, errs.ErrInvalid.Msg, err.Error())
+				return
+			}
+			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, "")
+			return
+		}
+
+		utils.Respond(w, scheduleUser)
 	}
 }

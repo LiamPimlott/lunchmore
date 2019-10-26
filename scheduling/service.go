@@ -17,6 +17,7 @@ import (
 type Service interface {
 	CreateSchedule(sched ScheduleRequest, claimedID uint) (Schedule, error)
 	GetOrgSchedules(orgID uint) ([]Schedule, error)
+	JoinSchedule(schedID, claimedOrgID, claimedUserID uint) (ScheduleUser, error)
 	ScheduleAll() error
 	ScheduleJob(schedID uint) error
 	GetScheduleUsers(schedID uint) ([]ScheduleUser, error)
@@ -91,6 +92,28 @@ func (s *schedulingService) GetOrgSchedules(orgID uint) ([]Schedule, error) {
 	return schedules, nil
 }
 
+// JoinSchedule creates a schedule user
+func (s *schedulingService) JoinSchedule(schedID, claimedOrgID, claimedUserID uint) (ScheduleUser, error) {
+	sched, err := s.repo.GetByID(schedID)
+	if err != nil {
+		log.Printf("error getting schedule by id: %s", err.Error())
+		return ScheduleUser{}, err
+	}
+
+	if sched.OrgID != claimedOrgID {
+		log.Printf("error joining schedule: sched org id does not equal claimed org id")
+		return ScheduleUser{}, errs.ErrForbidden
+	}
+
+	scheduleUser, err := s.repo.CreateScheduleUser(ScheduleUser{UserID: claimedUserID, ScheduleID: schedID})
+	if err != nil {
+		log.Printf("error creating schedule user: %s", err.Error())
+		return ScheduleUser{}, err
+	}
+
+	return scheduleUser, nil
+}
+
 // ScheduleAll schedules a cron job for all Schedules in the database
 func (s *schedulingService) ScheduleAll() error {
 	schdls, err := s.repo.GetSchedules()
@@ -135,7 +158,7 @@ func (s *schedulingService) ScheduleJob(schedID uint) error {
 	return nil
 }
 
-// GetScheduleUsers return all
+// GetScheduleUsers returns all schedule users
 func (s *schedulingService) GetScheduleUsers(schdID uint) ([]ScheduleUser, error) {
 	su, err := s.repo.GetScheduleUsers(schdID)
 	if err != nil {

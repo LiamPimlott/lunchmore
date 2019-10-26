@@ -14,6 +14,7 @@ type Repository interface {
 	GetOrgSchedules(ordID uint) ([]Schedule, error)
 	GetByID(id uint) (Schedule, error)
 	GetSchedules() ([]Schedule, error)
+	CreateScheduleUser(s ScheduleUser) (ScheduleUser, error)
 	GetScheduleUsers(sID uint) ([]ScheduleUser, error)
 	SaveLunchMatches(lm []LunchMatch) error
 }
@@ -140,6 +141,34 @@ func (r *mysqlSchedulingRepository) GetSchedules() (scheds []Schedule, err error
 	}
 
 	return scheds, err
+}
+
+// CreateSheduleUser creates a schedule user
+func (r *mysqlSchedulingRepository) CreateScheduleUser(s ScheduleUser) (ScheduleUser, error) {
+	sql, args, err := sq.Insert("schedule_users").SetMap(sq.Eq{
+		"user_id":     s.UserID,
+		"schedule_id": s.ScheduleID,
+	}).ToSql()
+
+	if err != nil {
+		log.Printf("error assembling create schedule statement: %s", err.Error())
+		return ScheduleUser{}, err
+	}
+
+	res, err := r.DB.Exec(sql, args...)
+	if err != nil {
+		log.Printf("error executing create schedule statement: %s", err.Error())
+		return ScheduleUser{}, err
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		log.Printf("error accesing last inserted schedule id: %s", err.Error())
+		return ScheduleUser{}, err
+	}
+	s.ID = uint(id)
+
+	return s, nil
 }
 
 // GetScheduleUsers gets all users part of a schedule
