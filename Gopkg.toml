@@ -80,3 +80,11 @@
 [[constraint]]
   name = "github.com/google/uuid"
   version = "1.1.1"
+
+[[constraint]]
+  name = "github.com/gorilla/sessions"
+  version = "1.2.0"
+
+[[constraint]]
+  name = "github.com/gorilla/securecookie"
+  version = "1.1.1"

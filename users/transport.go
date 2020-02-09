@@ -10,11 +10,12 @@ import (
 	// "github.com/gorilla/mux"
 
 	"github.com/LiamPimlott/lunchmore/lib/errs"
+	"github.com/LiamPimlott/lunchmore/lib/sessions"
 	"github.com/LiamPimlott/lunchmore/lib/utils"
 )
 
 // NewSignupHandler returns an http handler for signing up a new user and organization.
-func NewSignupHandler(s Service) http.HandlerFunc {
+func NewSignupHandler(s Service, sessions sessions.SessionStorer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		signupReq := &SignupRequest{}
 
@@ -33,12 +34,19 @@ func NewSignupHandler(s Service) http.HandlerFunc {
 			return
 		}
 
+		err = sessions.Set(r, w, usr.ID)
+		if err != nil {
+			log.Printf("error setting user session: %s\n", err)
+			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, "An error has occured.")
+			return
+		}
+
 		utils.Respond(w, usr)
 	}
 }
 
 // NewLoginHandler returns an http handler for logging in users
-func NewLoginHandler(s Service) http.HandlerFunc {
+func NewLoginHandler(s Service, sessions sessions.SessionStorer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body := &User{}
 
@@ -50,13 +58,47 @@ func NewLoginHandler(s Service) http.HandlerFunc {
 			return
 		}
 
-		tkn, err := s.Login(*body)
+		usr, err := s.Login(*body)
 		if err != nil {
 			log.Printf("error logging in user: %s\n", err)
 			if err == sql.ErrNoRows {
 				utils.RespondError(w, errs.ErrNotFound.Code, errs.ErrNotFound.Msg, "Email or password is incorrect.")
 				return
 			}
+			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, "An error has occured.")
+			return
+		}
+
+		err = sessions.Set(r, w, usr.ID)
+		if err != nil {
+			log.Printf("error setting user session: %s\n", err)
+			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, "An error has occured.")
+			return
+		}
+
+		utils.Respond(w, usr)
+	}
+}
+
+// NewRefreshHandler returns an http handler for refreshing a jwt
+func NewRefreshHandler(s Service, sessions sessions.SessionStorer) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		usrID, err := sessions.Validate(r)
+		if err != nil {
+			utils.RespondError(w, errs.ErrForbidden.Code, errs.ErrForbidden.Msg, "Unauthorized")
+			return
+		}
+
+		tkn, err := s.RefreshJwt(usrID)
+		if err != nil {
+			log.Printf("error refreshing token: %s\n", err)
+			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, "An error has occured.")
+			return
+		}
+
+		err = sessions.Set(r, w, usrID)
+		if err != nil {
+			log.Printf("error setting user session: %s\n", err)
 			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, "An error has occured.")
 			return
 		}

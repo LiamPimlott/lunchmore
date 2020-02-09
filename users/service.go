@@ -16,6 +16,7 @@ type Service interface {
 	AcceptInvite(u User) (User, error)
 	GetUsersMap(usrIDs []uint) (map[uint]User, error)
 	GetByID(idRequested, idClaimed uint) (User, error)
+	RefreshJwt(usrID uint) (string, error)
 }
 
 type usersService struct {
@@ -163,4 +164,21 @@ func (s *usersService) AcceptInvite(u User) (User, error) {
 	u.Token = token
 
 	return u, nil
+}
+
+// RefreshJwt creates a fresh jwt for a user
+func (s *usersService) RefreshJwt(usrID uint) (string, error) {
+	usr, err := s.repo.GetByID(usrID)
+	if err != nil {
+		log.Printf("error getting user by id: %s\n", err)
+		return "", err
+	}
+
+	tkn, err := utils.GenerateToken(usr.ID, usr.OrgID, s.secret)
+	if err != nil {
+		log.Printf("error generating token: %s\n", err)
+		return "", err
+	}
+
+	return tkn, nil
 }

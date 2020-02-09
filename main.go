@@ -10,10 +10,12 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/robfig/cron"
 	"github.com/spf13/viper"
 
 	"github.com/LiamPimlott/lunchmore/invites"
+	libsessions "github.com/LiamPimlott/lunchmore/lib/sessions"
 	"github.com/LiamPimlott/lunchmore/mail"
 	auth "github.com/LiamPimlott/lunchmore/middleware"
 	"github.com/LiamPimlott/lunchmore/organizations"
@@ -90,6 +92,21 @@ func main() {
 	}
 	log.Println("db connected")
 
+	//////////////
+	// SESSIONS //
+	//////////////
+	cookieStore := sessions.NewCookieStore([]byte("34-or-64-bits-recommended"), []byte("16-24-&-34-bytes"))
+
+	cookieStore.Options = &sessions.Options{
+		MaxAge:   7200,
+		Secure:   true,
+		HttpOnly: true,
+		Path:     "/users/refresh",
+		SameSite: http.SameSiteStrictMode,
+	}
+
+	sessionStorer := libsessions.NewSessionStorer(cookieStore, "lunchmore-session")
+
 	///////////
 	// Repos //
 	///////////
@@ -116,15 +133,20 @@ func main() {
 	// Handlers //
 	//////////////
 
-	loginUserHandler := users.NewLoginHandler(usersService)
-	signupHandler := users.NewSignupHandler(usersService)
+	// Users
+	loginUserHandler := users.NewLoginHandler(usersService, sessionStorer)
+	signupHandler := users.NewSignupHandler(usersService, sessionStorer)
+	refreshHandler := users.NewRefreshHandler(usersService, sessionStorer)
 
+	// Orgs
 	createOrganizationHandler := organizations.NewCreateOrganizationHandler(orgsService)
 
+	// Invites
 	sendInviteHandler := invites.NewSendInviteHandler(invitesService)
 	acceptInviteHandler := invites.NewAcceptInviteHandler(invitesService)
 	getInviteHandler := invites.NewGetInviteHandler(invitesService)
 
+	// Schedules
 	createScheduleHandler := scheduling.NewCreateScheduleHandler(schedulingService)
 	getOrgSchedulesHandler := scheduling.NewGetOrgSchedulesHandler(schedulingService)
 	joinScheduleHandler := scheduling.NewJoinScheduleHandler(schedulingService)
@@ -150,8 +172,9 @@ func main() {
 	// Users
 	r.Handle("/signup", signupHandler).Methods("POST")
 	r.Handle("/users/login", loginUserHandler).Methods("POST")
+	r.Handle("/users/refresh", refreshHandler).Methods("GET")
 
-	// Organizations
+	// Orgs
 	r.Handle("/organization", auth.Required(createOrganizationHandler, secret)).Methods("POST")
 
 	// Invitations
