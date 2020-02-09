@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { useHistory } from "react-router-dom";
 import { makeStyles } from '@material-ui/core/styles';
 import Grid from '@material-ui/core/Grid';
 import Container from '@material-ui/core/Container';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
+import { StoreContext } from '../../contexts/StoreContext'
 
 const useStyles = makeStyles(theme => ({
   formContainer: {
@@ -13,19 +15,23 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-const Login = ({ auth, history }) => {
+const Login = () => {
   const classes = useStyles();
   const [values, setValues] = useState({
     email: '',
     password: '',
   });
 
-  const handleChange = name => event => {
-    setValues({ ...values, [name]: event.target.value });
+  const history = useHistory();
+
+  const { auth } = useContext(StoreContext);
+
+  const handleChange = name => e => {
+    setValues({ ...values, [name]: e.target.value });
   };
 
-  const onSubmit = async (event) => {
-    const err = await auth.actions.login(values.email, values.password);
+  const onSubmit = async () => {
+    const err = await auth.login(values.email, values.password);
     if (err) {
       alert(err);
     } else {

@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useHistory, useRouteMatch } from "react-router-dom";
 import { useJoinOrganizationState } from '../../hooks';
 import { makeStyles } from '@material-ui/core/styles';
 import Grid from '@material-ui/core/Grid';
 import Container from '@material-ui/core/Container';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
+import { StoreContext } from '../../contexts/StoreContext'
 
 const useStyles = makeStyles(theme => ({
   formContainer: {
@@ -14,15 +16,24 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-const Join = ({ auth, match, history }) => {
+const Join = () => {
   const classes = useStyles();
+
   const invite = useJoinOrganizationState();
-  const { params: { code } } = match;
+  
   const [values, setValues] = useState({
     first_name: '',
     last_name: '',
     password: '',
   });
+
+  const history = useHistory();
+  
+  const match = useRouteMatch('/invite/:code');
+
+  const { auth } = useContext(StoreContext);
+
+  const { params: { code } } = match;
   
   useEffect(() => {
     invite.actions.getOrgName(code);
@@ -33,7 +44,7 @@ const Join = ({ auth, match, history }) => {
   };
 
   const onSubmit = async (event) => {
-    const err = await auth.actions.join(code, { ...values });
+    const err = await auth.join(code, { ...values });
     if (err) {
       alert(err);
     } else {

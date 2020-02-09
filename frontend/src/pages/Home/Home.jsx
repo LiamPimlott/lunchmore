@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
+import { StoreContext } from '../../contexts/StoreContext';
 
-const Home = ({ auth }) => {
-const { id, first_name } = auth;
+const Home = () => {
+const { auth: { state: { id, first_name } } } = useContext(StoreContext);
 return (
     <div>
       <h1>Welcome to Lunchmore{first_name ? ` ${first_name}!` : '!'}</h1>
