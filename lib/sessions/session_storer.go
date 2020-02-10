@@ -14,6 +14,7 @@ import (
 type SessionStorer interface {
 	Set(r *http.Request, w http.ResponseWriter, usrID uint) error
 	Validate(r *http.Request) (uint, error)
+	Invalidate(r *http.Request, w http.ResponseWriter) error
 }
 
 type sessionStorer struct {
@@ -39,6 +40,7 @@ func (s *sessionStorer) Set(r *http.Request, w http.ResponseWriter, usrID uint) 
 
 	session.Values["authenticated"] = true
 	session.Values["userID"] = usrID
+
 	if err := s.store.Save(r, w, session); err != nil {
 		log.Printf("failed to save session: %s", err.Error())
 		return errs.ErrInternal
@@ -52,11 +54,11 @@ func (s *sessionStorer) Validate(r *http.Request) (uint, error) {
 	session, err := s.store.Get(r, s.name)
 	if err != nil {
 		log.Printf("failed to get session: %s", err.Error())
-		return 0, errs.ErrForbidden
+		return 0, errs.ErrInternal
 	}
 
 	if a, ok := session.Values["authenticated"].(bool); session.IsNew || !ok || !a {
-		log.Printf("session un-authenticated")
+		log.Printf("session not authenticated")
 		return 0, errs.ErrForbidden
 	}
 
@@ -67,4 +69,22 @@ func (s *sessionStorer) Validate(r *http.Request) (uint, error) {
 	}
 
 	return usrID, nil
+}
+
+func (s *sessionStorer) Invalidate(r *http.Request, w http.ResponseWriter) error {
+	session, err := s.store.Get(r, s.name)
+	if err != nil {
+		log.Printf("failed to get session: %s", err.Error())
+		return errs.ErrInternal
+	}
+
+	session.Values["authenticated"] = false
+	session.Values["userID"] = 0
+
+	if err := s.store.Save(r, w, session); err != nil {
+		log.Printf("failed to save session: %s", err.Error())
+		return errs.ErrInternal
+	}
+
+	return nil
 }

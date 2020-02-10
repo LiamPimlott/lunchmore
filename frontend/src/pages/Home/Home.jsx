@@ -3,7 +3,15 @@ import { Link } from 'react-router-dom';
 import { StoreContext } from '../../contexts/StoreContext';
 
 const Home = () => {
-const { auth: { state: { id, first_name } } } = useContext(StoreContext);
+const { auth: { state: { id, first_name }, logout } } = useContext(StoreContext);
+
+const handleLogout = async () => {
+  const err = await logout();
+  if (err) {
+    alert(err);
+  }
+}
+
 return (
     <div>
       <h1>Welcome to Lunchmore{first_name ? ` ${first_name}!` : '!'}</h1>
@@ -18,7 +26,7 @@ return (
         </>
         : <>
           <div>
-            <Link>Logout</Link>
+            <Link to='/' onClick={handleLogout}>Logout</Link>
           </div>
           <div>
             <Link to='/members'>Members</Link>

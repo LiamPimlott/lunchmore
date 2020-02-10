@@ -3,6 +3,9 @@
   "server": {
     "port": ":8080"
   },
+  "frontend": {
+    "hostname": "http://localhost:3000"
+  },
   "context":{
     "timeout":2
   },

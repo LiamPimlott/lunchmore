@@ -33,11 +33,12 @@ type DatabaseConfig struct {
 }
 
 var (
-	c          *cron.Cron
-	dbConfig   DatabaseConfig
-	mailConfig mail.ClientConfig
-	secret     string
-	serverPort string
+	c                *cron.Cron
+	dbConfig         DatabaseConfig
+	mailConfig       mail.ClientConfig
+	secret           string
+	serverPort       string
+	frontendHostName string
 )
 
 func init() {
@@ -51,6 +52,9 @@ func init() {
 	c = cron.New()
 
 	serverPort = viper.GetString(`server.port`)
+
+	frontendHostName = viper.GetString(`frontend.hostname`)
+
 	dbConfig = DatabaseConfig{
 		Host: viper.GetString(`database.host`),
 		Port: viper.GetString(`database.port`),
@@ -58,12 +62,14 @@ func init() {
 		Pass: viper.GetString(`database.pass`),
 		Name: viper.GetString(`database.name`),
 	}
+
 	mailConfig = mail.ClientConfig{
 		Username: viper.GetString(`mail.username`),
 		Password: viper.GetString(`mail.password`),
 		Host:     viper.GetString(`mail.host`),
 		Port:     viper.GetInt(`mail.port`),
 	}
+
 	secret = viper.GetString(`jwt.secret`)
 }
 
@@ -98,11 +104,11 @@ func main() {
 	cookieStore := sessions.NewCookieStore([]byte("34-or-64-bits-recommended"), []byte("16-24-&-34-bytes"))
 
 	cookieStore.Options = &sessions.Options{
-		MaxAge:   7200,
-		Secure:   true,
+		MaxAge: 7200,
+		// Secure:   true,
 		HttpOnly: true,
 		Path:     "/users/refresh",
-		SameSite: http.SameSiteStrictMode,
+		// SameSite: http.SameSiteStrictMode,
 	}
 
 	sessionStorer := libsessions.NewSessionStorer(cookieStore, "lunchmore-session")
@@ -134,8 +140,9 @@ func main() {
 	//////////////
 
 	// Users
-	loginUserHandler := users.NewLoginHandler(usersService, sessionStorer)
 	signupHandler := users.NewSignupHandler(usersService, sessionStorer)
+	loginUserHandler := users.NewLoginHandler(usersService, sessionStorer)
+	logoutUserHandler := users.NewLogoutHandler(sessionStorer)
 	refreshHandler := users.NewRefreshHandler(usersService, sessionStorer)
 
 	// Orgs
@@ -172,6 +179,7 @@ func main() {
 	// Users
 	r.Handle("/signup", signupHandler).Methods("POST")
 	r.Handle("/users/login", loginUserHandler).Methods("POST")
+	r.Handle("/users/logout", logoutUserHandler).Methods("GET")
 	r.Handle("/users/refresh", refreshHandler).Methods("GET")
 
 	// Orgs
@@ -200,7 +208,27 @@ func main() {
 	// root route will serve the built react app
 	r.Handle("/", http.FileServer(http.Dir("./frontend/build")))
 
+	//////////
+	// CORS //
+	//////////
+
+	corsConfig := []handlers.CORSOption{
+		handlers.AllowedOrigins([]string{frontendHostName}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
+	}
+
+	////////////////
+	// MIDDLEWARE //
+	////////////////
+
+	// chain logging middleware
+	h := handlers.LoggingHandler(os.Stdout, r)
+
+	// chain CORS middleware
+	h = handlers.CORS(corsConfig...)(h)
+
 	// start server
 	log.Printf("listening on port %s\n", serverPort)
-	http.ListenAndServe(serverPort, handlers.LoggingHandler(os.Stdout, r))
+	http.ListenAndServe(serverPort, h)
 }

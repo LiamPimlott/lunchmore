@@ -1,8 +1,9 @@
-import { useReducer } from 'react';
+import { useReducer, useEffect } from 'react';
+import axios from 'axios';
 import { authReducer, authInitialState } from '../reducers/auth';
 import ACTIONS from '../actions/auth';
 
-import axios from 'axios';
+axios.defaults.baseURL = process.env.REACT_APP_API_HOST;
 
 const useAuth = () => {
   const [state, dispatch] = useReducer(authReducer, authInitialState);
@@ -24,9 +25,17 @@ const useAuth = () => {
         return err.response.data.message
       }
     },
+    logout: async () => {
+      try {
+        await axios.get('/users/logout');
+        dispatch({ type: ACTIONS.LOGOUT })
+      } catch(err) {
+        return err.response.data.message
+      }
+    },
     refresh: async () => {
       try {
-        const r = await axios.post('/users/refresh',);
+        const r = await axios.get('/users/refresh');
         dispatch({ type: ACTIONS.REFRESH, payload: r.data })
       } catch(err) {
         return err.response.data.message
@@ -41,6 +50,11 @@ const useAuth = () => {
       }
     },
   };
+
+  // try to refresh once on load
+  useEffect(() => {
+    functions.refresh();
+  }, []);
 
   return { state, ...functions };
 }

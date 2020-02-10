@@ -80,6 +80,18 @@ func NewLoginHandler(s Service, sessions sessions.SessionStorer) http.HandlerFun
 	}
 }
 
+// NewLogoutHandler returns an http handler that invalidate the requests session cookie
+func NewLogoutHandler(sessions sessions.SessionStorer) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := sessions.Invalidate(r, w)
+		if err != nil {
+			log.Printf("error invalidating user session: %s\n", err)
+			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, "An error has occured.")
+			return
+		}
+	}
+}
+
 // NewRefreshHandler returns an http handler for refreshing a jwt
 func NewRefreshHandler(s Service, sessions sessions.SessionStorer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -89,7 +101,7 @@ func NewRefreshHandler(s Service, sessions sessions.SessionStorer) http.HandlerF
 			return
 		}
 
-		tkn, err := s.RefreshJwt(usrID)
+		usr, err := s.RefreshJwt(usrID)
 		if err != nil {
 			log.Printf("error refreshing token: %s\n", err)
 			utils.RespondError(w, errs.ErrInternal.Code, errs.ErrInternal.Msg, "An error has occured.")
@@ -103,7 +115,7 @@ func NewRefreshHandler(s Service, sessions sessions.SessionStorer) http.HandlerF
 			return
 		}
 
-		utils.Respond(w, tkn)
+		utils.Respond(w, usr)
 	}
 }
 

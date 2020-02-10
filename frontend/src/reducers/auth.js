@@ -15,6 +15,8 @@ const reducer = (state, action) => {
       return { ...state, ...action.payload }  
     case AUTH.LOGIN:
       return { ...state, ...action.payload }
+    case AUTH.LOGOUT:
+      return initialState
     case AUTH.REFRESH:
       return { ...state, ...action.payload }
     case AUTH.JOIN:
